@@ -323,7 +323,7 @@ PRODUCTS = [
             },
             {
                 "name": "Guardian Gold",
-                "url":  "https://guardian-gold.com.au/product/1oz-silver-kangaroo-coin-2026/",
+                "url":  "https://guardian-gold.com.au/brand/perth-mint/",
                 "wait": 4000,
                 "selectors": [
                     ".woocommerce-Price-amount",
@@ -392,7 +392,7 @@ PRODUCTS = [
             },
             {
                 "name": "Gold Stackers",
-                "url":  "https://www.goldstackers.com.au/product/perth-mint-cast-gold-bar-1-oz/",
+                "url":  "https://www.goldstackers.com.au/product/perth-mint-cast-gold-bar-1oz/",
                 "wait": 4000,
                 "selectors": [
                     ".woocommerce-Price-amount",
@@ -467,7 +467,7 @@ PRODUCTS = [
             },
             {
                 "name": "Ainslie Bullion",
-                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1g-minted-gold-bar-Perth-Mint/ID/25",
+                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1g-Minted-Gold-Bar-Perth-Mint/ID/25",
                 "wait": 4000,
                 "selectors": [".ProductPrice",".product-price","[class*=\'Price\']",".price"],
             },
