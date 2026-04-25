@@ -1,0 +1,43 @@
+name: Bullion Price Scraper
+
+on:
+  schedule:
+    # 7am Sydney AEST = 9pm UTC (11pm Vienna)
+    - cron: '0 21 * * *'
+    # 3pm Sydney AEST = 5am UTC (7am Vienna)
+    - cron: '0 5 * * *'
+  # Allow manual trigger from GitHub
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright openpyxl
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Run scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: python scraper.py
+
+      - name: Upload Excel as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bullion-prices
+          path: bullion_prices_*.xlsx
+          retention-days: 7

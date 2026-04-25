@@ -1,18 +1,12 @@
-"""patch.py — fix Perth Mint silver + Gold Stackers 1oz gold URLs"""
+"""patch.py — replace hardcoded keys with environment variables"""
 
 with open("scraper.py", "r", encoding="utf-8") as f:
     code = f.read()
 
 changes = [
-    # Perth Mint silver — correct URL
     (
-        '"url":  "https://www.perthmint.com/shop/bullion/bullion-coins/kangaroo-2026-1oz-silver-bullion-coin/",',
-        '"url":  "https://www.perthmint.com/shop/bullion/bullion-coins/australian-kangaroo-2026-1oz-silver-bullion-coin-in-pouch/",',
-    ),
-    # Gold Stackers 1oz gold — correct URL
-    (
-        '"url":  "https://www.goldstackers.com.au/product/perth-mint-australian-kangaroo-2026-1oz-gold-bullion-coin-2/",',
-        '"url":  "https://www.goldstackers.com.au/product/australian-kangaroo-2026-1-oz-gold-bullion-coin/",',
+        '# ── Supabase ──────────────────────────────────────────────────────────────────\nSUPABASE_URL = "https://cjxkhvkvhgnlnviykoad.supabase.co"\nSUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0"',
+        '# ── Supabase ──────────────────────────────────────────────────────────────────\nimport os\nSUPABASE_URL = os.environ.get("SUPABASE_URL", "https://cjxkhvkvhgnlnviykoad.supabase.co")\nSUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0")',
     ),
 ]
 
