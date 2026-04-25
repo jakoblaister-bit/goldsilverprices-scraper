@@ -1,12 +1,18 @@
-"""patch.py — replace hardcoded keys with environment variables"""
+"""patch.py — fix last 2 URLs"""
 
 with open("scraper.py", "r", encoding="utf-8") as f:
     code = f.read()
 
 changes = [
+    # Gold Stackers 1oz bar — use their actual Perth Mint cast bar URL
     (
-        '# ── Supabase ──────────────────────────────────────────────────────────────────\nSUPABASE_URL = "https://cjxkhvkvhgnlnviykoad.supabase.co"\nSUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0"',
-        '# ── Supabase ──────────────────────────────────────────────────────────────────\nimport os\nSUPABASE_URL = os.environ.get("SUPABASE_URL", "https://cjxkhvkvhgnlnviykoad.supabase.co")\nSUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0")',
+        '"url":  "https://www.goldstackers.com.au/product/perth-mint-cast-gold-bar-1oz/",',
+        '"url":  "https://www.goldstackers.com.au/product/perth-mint-cast-gold-bar-1-oz/",',
+    ),
+    # ABC Bullion 1g — use their general gold store page which shows prices
+    (
+        '"url":  "https://www.abcbullion.com.au/store/gold/gabcmint1g-abc-bullion-1g-gold-minted-bar",',
+        '"url":  "https://www.abcbullion.com.au/store/gold/abc-bullion-gold",',
     ),
 ]
 

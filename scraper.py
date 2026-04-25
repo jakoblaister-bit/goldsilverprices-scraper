@@ -221,7 +221,7 @@ PRODUCTS = [
             },
             {
                 "name": "Guardian Gold",
-                "url":  "https://guardian-gold.com.au/shop/",
+                "url":  "https://guardian-gold.com.au/product/1oz-gold-kang-coin-2026/",
                 "wait": 4000,
                 "selectors": [
                     ".woocommerce-Price-amount",
@@ -368,7 +368,7 @@ PRODUCTS = [
             },
             {
                 "name": "ABC Bullion",
-                "url":  "https://www.abcbullion.com.au/store/gold/gabcmint1oz-abc-bullion-1oz-gold-cast-bar",
+                "url":  "https://www.abcbullion.com.au/store/gold/gabg011oz-abc-gold-cast-bar-9999",
                 "wait": 5000,
                 "networkidle": True,
                 "selectors": [
@@ -381,7 +381,7 @@ PRODUCTS = [
             },
             {
                 "name": "Ainslie Bullion",
-                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Perth-Mint-Gold-Cast-Bar/ID/28",
+                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Perth-Mint-Gold-Cast-Bar/ID/32",
                 "wait": 4000,
                 "selectors": [
                     ".ProductPrice",
@@ -392,7 +392,7 @@ PRODUCTS = [
             },
             {
                 "name": "Gold Stackers",
-                "url":  "https://www.goldstackers.com.au/buy/gold/all-1oz/",
+                "url":  "https://www.goldstackers.com.au/product/perth-mint-cast-gold-bar-1-oz/",
                 "wait": 4000,
                 "selectors": [
                     ".woocommerce-Price-amount",
@@ -425,7 +425,7 @@ PRODUCTS = [
             },
             {
                 "name": "Guardian Gold",
-                "url":  "https://guardian-gold.com.au/product/1oz-perth-mint-gold-minted-bar/",
+                "url":  "https://guardian-gold.com.au/product/1oz-perth-mint-gold-cast-bar/",
                 "wait": 4000,
                 "selectors": [
                     ".woocommerce-Price-amount",
@@ -459,7 +459,7 @@ PRODUCTS = [
             },
             {
                 "name": "ABC Bullion",
-                "url":  "https://www.abcbullion.com.au/store/gold/gabcmint1g-abc-bullion-1g-gold-minted-bar",
+                "url":  "https://www.abcbullion.com.au/store/gold/abc-bullion-gold",
                 "wait": 5000,
                 "networkidle": True,
                 "selectors": [".final-price",".price-box .price","[class*=\'final-price\']",".price"],
