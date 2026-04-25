@@ -1,0 +1,238 @@
+^C^C=================================================================
+  GoldSilverPrices.com.au — CSS Selector Scraper v3
+  Runs every 8 hours via Task Scheduler
+=================================================================
+  Started: 2026-04-24 15:57:45
+
+  Testing database connection...
+  ✓ Supabase connected
+
+
+─────────────────────────────────────────────────────────────────
+  📦 1oz Gold Kangaroo 2026  (AUD $5,000–$15,000)
+─────────────────────────────────────────────────────────────────
+  ✓  KJC Bullion                     $7,122.75  [regex] [✓ db]
+  ✓  Perth Mint                      $6,866.48  [CSS] [✓ db]
+  ✓  ABC Bullion                     $7,023.50  [regex] [✓ db]
+  ✓  Ainslie Bullion                 $6,862.34  [CSS] [✓ db]
+  ✓  Gold Stackers                  $13,833.45  [CSS] [✓ db]
+  ✓  Jaggards                        $6,846.00  [CSS] [✓ db]
+  ✓  Swan Bullion                    $6,801.40  [regex] [✓ db]
+  ✓  Guardian Gold                   $6,808.34  [regex] [✓ db]
+
+─────────────────────────────────────────────────────────────────
+  📦 1oz Silver Kangaroo 2026  (AUD $80–$300)
+─────────────────────────────────────────────────────────────────
+  ✓  KJC Bullion                       $142.32  [regex] [✓ db]
+  ✗  Perth Mint                   NOT FOUND
+       URL     : https://www.perthmint.com/shop/bullion/bullion-coins/australian-kangaroo-2026-1oz-silver-bullion-coin/
+       Preview : Skip to Content View latest notices for service updates. About Refinery and Treasury News Contact us What’s new Collector coins Jewellery and gifts Bullion Invest Visit Login / Register AU/AUD Cart Search Error code: 404 Oops! Page not found. We're s
+  ✓  ABC Bullion                       $130.60  [regex] [✓ db]
+  ✓  Ainslie Bullion                   $120.42  [CSS] [✓ db]
+  ✓  Gold Stackers                     $129.30  [CSS] [✓ db]
+  ✓  Jaggards                          $120.77  [CSS] [✓ db]
+  ✓  Swan Bullion                      $119.50  [regex] [✓ db]
+  ✓  Guardian Gold                     $119.52  [CSS] [✓ db]
+
+─────────────────────────────────────────────────────────────────
+  📦 1oz Gold Bar (Perth Mint)  (AUD $5,000–$15,000)
+─────────────────────────────────────────────────────────────────
+  ✗  KJC Bullion                  NOT FOUND
+       URL     : https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-perth-mint-gold-bullion-minted-bar/2228029
+       Preview : Buy 24-7 Shipping Click & Collect × Free Insurance on all bullion orders delivered world wide Contact Book Appointment 1300 844 018 Login 0 Cart INFO Gold Silver Platinum & Palladium Collectables Secure Vaulting Blog AUD Gold $ 12.92 0.2% $ 6605.77 A
+  ✗  Perth Mint                   NOT FOUND
+       URL     : https://www.perthmint.com/shop/bullion/bullion-bars/perth-mint-1oz-gold-cast-bar/
+       Preview : Skip to Content View latest notices for service updates. About Refinery and Treasury News Contact us What’s new Collector coins Jewellery and gifts Bullion Invest Visit Login / Register AU/AUD Cart Search Error code: 404 Oops! Page not found. We're s
+  ✓  ABC Bullion                     $6,614.52  [regex] [✓ db]
+  ✓  Ainslie Bullion                 $6,872.34  [regex] [✓ db]
+  ✓  Gold Stackers                   $6,787.95  [CSS] [✓ db]
+  ✓  Jaggards                        $6,785.22  [CSS] [✓ db]
+  ✓  Swan Bullion                    $6,744.40  [regex] [✓ db]
+  ✓  Guardian Gold                   $6,819.12  [CSS] [✓ db]
+
+─────────────────────────────────────────────────────────────────
+  📦 1g Gold Minted Bar (Perth Mint)  (AUD $200–$600)
+─────────────────────────────────────────────────────────────────
+  ✓  KJC Bullion                       $303.24  [regex] [✓ db]
+  ✗  Perth Mint                   NOT FOUND
+       URL     : https://www.perthmint.com/shop/bullion/bullion-bars/perth-mint-1g-gold-minted-bar/
+       Preview : Skip to Content View latest notices for service updates. About Refinery and Treasury News Contact us What’s new Collector coins Jewellery and gifts Bullion Invest Visit Login / Register AU/AUD Cart Search Error code: 404 Oops! Page not found. We're s
+  ✗  ABC Bullion                  NOT FOUND
+       URL     : https://www.abcbullion.com.au/store/gold/gabcmint1g-abc-bullion-1g-gold-cast-bar
+       Preview : Support BUY GOLD 6614.52/oz BUY SILVER 107.56/oz BUY PLATINUM 2893.11/oz BUY PALLADIUM 2263.00/oz USD AUD HKD CNY AUD FX RATE 0.7121 "PRICE REFRESH" 00:13 FAQ CONTACT US BUY GOLD BUY SILVER BUY PLATINUM ALL PRODUCTS Login Create Account Gold Saver Ch
+  ✓  Ainslie Bullion                   $246.06  [CSS] [✓ db]
+  ✗  Gold Stackers                NOT FOUND
+       URL     : https://www.goldstackers.com.au/product/perth-mint-1g-minted-gold-bar/
+       Preview : 1300 618 363 Show search Auctus Metal Portfolios Gold Prices Silver Prices Platinum Prices My Account Buy & Sell Charts & Prices Services Locations About Us Investor Info Login Not Found Sorry, but the page you were trying to view does not exist. Kee
+  ✓  Jaggards                          $247.90  [CSS] [✓ db]
+  ✓  Swan Bullion                      $239.65  [regex] [✓ db]
+  ✓  Guardian Gold                     $250.89  [CSS] [✓ db]
+
+=================================================================
+  RESULTS
+=================================================================
+
+  1oz Gold Kangaroo 2026
+    1. Swan Bullion                    $6,801.40 ← cheapest
+    2. Guardian Gold                   $6,808.34
+    3. Jaggards                        $6,846.00
+    4. Ainslie Bullion                 $6,862.34
+    5. Perth Mint                      $6,866.48
+    6. ABC Bullion                     $7,023.50
+    7. KJC Bullion                     $7,122.75
+    8. Gold Stackers                  $13,833.45
+    ✓ 8/8 dealers
+
+  1oz Silver Kangaroo 2026
+    1. Swan Bullion                      $119.50 ← cheapest
+    2. Guardian Gold                     $119.52
+    3. Ainslie Bullion                   $120.42
+    4. Jaggards                          $120.77
+    5. Gold Stackers                     $129.30
+    6. ABC Bullion                       $130.60
+    7. KJC Bullion                       $142.32
+    ✗ Missed: Perth Mint
+    ✓ 7/8 dealers
+
+  1oz Gold Bar (Perth Mint)
+    1. ABC Bullion                     $6,614.52 ← cheapest
+    2. Swan Bullion                    $6,744.40
+    3. Jaggards                        $6,785.22
+    4. Gold Stackers                   $6,787.95
+    5. Guardian Gold                   $6,819.12
+    6. Ainslie Bullion                 $6,872.34
+    ✗ Missed: KJC Bullion, Perth Mint
+    ✓ 6/8 dealers
+
+  1g Gold Minted Bar (Perth Mint)
+    1. Swan Bullion                      $239.65 ← cheapest
+    2. Ainslie Bullion                   $246.06
+    3. Jaggards                          $247.90
+    4. Guardian Gold                     $250.89
+    5. KJC Bullion                       $303.24
+    ✗ Missed: Perth Mint, ABC Bullion, Gold Stackers
+    ✓ 5/8 dealers
+
+  Total captured: 26/32
+=================================================================
+
+  ✓ Excel saved → bullion_prices_20260424_1601.xlsx
+=================================================================
+=================================================================
+  GoldSilverPrices.com.au — CSS Selector Scraper v3
+  Runs every 8 hours via Task Scheduler
+=================================================================
+  Started: 2026-04-24 23:00:02
+
+  Testing database connection...
+  ✓ Supabase connected
+
+
+─────────────────────────────────────────────────────────────────
+  📦 1oz Gold Kangaroo 2026  (AUD $6,000–$15,000)
+─────────────────────────────────────────────────────────────────
+  ✓  KJC Bullion                     $7,109.65  [regex] [✓ db]
+  ✓  Perth Mint                     $10,000.00  [regex] [✓ db]
+  ✓  ABC Bullion                     $7,003.50  [regex] [✓ db]
+  ✓  Ainslie Bullion                 $6,842.03  [CSS] [✓ db]
+  ✓  Gold Stackers                  $13,856.05  [CSS] [✓ db]
+  ✓  Jaggards                        $6,831.00  [CSS] [✓ db]
+  ✓  Swan Bullion                    $6,784.25  [regex] [✓ db]
+  ✓  Guardian Gold                   $6,805.15  [regex] [✓ db]
+
+─────────────────────────────────────────────────────────────────
+  📦 1oz Silver Kangaroo 2026  (AUD $80–$300)
+─────────────────────────────────────────────────────────────────
+  ✓  KJC Bullion                       $142.11  [regex] [✓ db]
+  ✗  Perth Mint                   NOT FOUND
+       URL     : https://www.perthmint.com/shop/bullion/bullion-coins/australian-kangaroo-2026-1oz-silver-bullion-coin/
+       Preview : Skip to Content View latest notices for service updates. About Refinery and Treasury News Contact us What’s new Collector coins Jewellery and gifts Bullion Invest Visit Login / Register AU/AUD Cart Search Error code: 404 Oops! Page not found. We're s
+  ✓  ABC Bullion                       $130.40  [regex] [✓ db]
+  ✓  Ainslie Bullion                   $120.14  [CSS] [✓ db]
+  ✓  Gold Stackers                     $129.85  [CSS] [✓ db]
+  ✓  Jaggards                          $120.65  [CSS] [✓ db]
+  ✓  Swan Bullion                      $119.60  [regex] [✓ db]
+  ✓  Guardian Gold                     $120.37  [CSS] [✓ db]
+
+─────────────────────────────────────────────────────────────────
+  📦 1oz Gold Bar (Perth Mint)  (AUD $6,000–$15,000)
+─────────────────────────────────────────────────────────────────
+  ✓  KJC Bullion                     $7,089.75  [regex] [✓ db]
+  ✗  Perth Mint                   NOT FOUND
+       URL     : https://www.perthmint.com/shop/bullion/cast-bars/perth-mint-1oz-gold-cast-bar/
+       Preview : Skip to Content View latest notices for service updates. About Refinery and Treasury News Contact us What’s new Collector coins Jewellery and gifts Bullion Invest Visit Login / Register AU/AUD Cart Search Metal pricing is unavailable at this time. Bu
+  ✓  ABC Bullion                     $6,596.79  [regex] [✓ db]
+  ✓  Ainslie Bullion                 $6,853.97  [regex] [✓ db]
+  ✓  Gold Stackers                   $6,784.75  [CSS] [✓ db]
+  ✓  Jaggards                        $6,765.98  [CSS] [✓ db]
+  ✓  Swan Bullion                    $6,723.85  [regex] [✓ db]
+  ✓  Guardian Gold                   $6,820.15  [CSS] [✓ db]
+
+─────────────────────────────────────────────────────────────────
+  📦 1g Gold Minted Bar (Perth Mint)  (AUD $200–$600)
+─────────────────────────────────────────────────────────────────
+  ✓  KJC Bullion                       $302.76  [regex] [✓ db]
+  ✓  Perth Mint                        $251.79  [CSS] [✓ db]
+  ✗  ABC Bullion                  NOT FOUND
+       URL     : https://www.abcbullion.com.au/store/gold/gabcmint1g-abc-bullion-1g-gold-minted-bar
+       Preview : Support BUY GOLD 6596.79/oz BUY SILVER 107.35/oz BUY PLATINUM 2900.10/oz BUY PALLADIUM 2263.01/oz USD AUD HKD CNY AUD FX RATE 0.7150 "PRICE REFRESH" 02:53 FAQ CONTACT US BUY GOLD BUY SILVER BUY PLATINUM ALL PRODUCTS Login Create Account Gold Saver Ch
+  ✓  Ainslie Bullion                   $245.47  [CSS] [✓ db]
+  ✗  Gold Stackers                NOT FOUND
+       URL     : https://www.goldstackers.com.au/product/perth-mint-1g-minted-gold-bar-2/
+       Preview : 1300 618 363 Show search Auctus Metal Portfolios Gold Prices Silver Prices Platinum Prices My Account Buy & Sell Charts & Prices Services Locations About Us Investor Info Login Not Found Sorry, but the page you were trying to view does not exist. Kee
+  ✓  Jaggards                          $247.28  [CSS] [✓ db]
+  ✓  Swan Bullion                      $239.20  [regex] [✓ db]
+  ✓  Guardian Gold                     $250.98  [CSS] [✓ db]
+
+=================================================================
+  RESULTS
+=================================================================
+
+  1oz Gold Kangaroo 2026
+    1. Swan Bullion                    $6,784.25 ← cheapest
+    2. Guardian Gold                   $6,805.15
+    3. Jaggards                        $6,831.00
+    4. Ainslie Bullion                 $6,842.03
+    5. ABC Bullion                     $7,003.50
+    6. KJC Bullion                     $7,109.65
+    7. Perth Mint                     $10,000.00
+    8. Gold Stackers                  $13,856.05
+    ✓ 8/8 dealers
+
+  1oz Silver Kangaroo 2026
+    1. Swan Bullion                      $119.60 ← cheapest
+    2. Ainslie Bullion                   $120.14
+    3. Guardian Gold                     $120.37
+    4. Jaggards                          $120.65
+    5. Gold Stackers                     $129.85
+    6. ABC Bullion                       $130.40
+    7. KJC Bullion                       $142.11
+    ✗ Missed: Perth Mint
+    ✓ 7/8 dealers
+
+  1oz Gold Bar (Perth Mint)
+    1. ABC Bullion                     $6,596.79 ← cheapest
+    2. Swan Bullion                    $6,723.85
+    3. Jaggards                        $6,765.98
+    4. Gold Stackers                   $6,784.75
+    5. Guardian Gold                   $6,820.15
+    6. Ainslie Bullion                 $6,853.97
+    7. KJC Bullion                     $7,089.75
+    ✗ Missed: Perth Mint
+    ✓ 7/8 dealers
+
+  1g Gold Minted Bar (Perth Mint)
+    1. Swan Bullion                      $239.20 ← cheapest
+    2. Ainslie Bullion                   $245.47
+    3. Jaggards                          $247.28
+    4. Guardian Gold                     $250.98
+    5. Perth Mint                        $251.79
+    6. KJC Bullion                       $302.76
+    ✗ Missed: ABC Bullion, Gold Stackers
+    ✓ 6/8 dealers
+
+  Total captured: 28/32
+=================================================================
+
+  ✓ Excel saved → bullion_prices_20260424_2303.xlsx
+=================================================================
