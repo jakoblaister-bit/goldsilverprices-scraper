@@ -1,82 +1,74 @@
-"""patch_scraper_v2.py — fix Jaggards URLs + add Britannia and Silver Kookaburra"""
+"""patch_scraper_v2.py — fix URLs for new products"""
 
 with open("scraper_v2.py", "r", encoding="utf-8") as f:
     code = f.read()
 
 changes = [
 
-    # 1. Jaggards Maple Leaf — direct product URL
+    # 1. Jaggards Maple Leaf — use their category page sorted by price
     (
-        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/category/canadian-mint/gold-maple-coins/"},',
         '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/1oz-gold-maple-leaf-coin/"},',
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/1oz-canadian-gold-maple-leaf-coin/"},',
     ),
 
-    # 2. Jaggards Krugerrand — direct product URL
+    # 2. Jaggards Krugerrand — use their secondary Krugerrand page
     (
-        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/category/gold/world-gold-coins/"},',
         '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/1oz-krugerrand-gold-coin/"},',
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/1oz-south-african-gold-krugerrand/"},',
     ),
 
-    # 3. Add Gold Britannia after Krugerrand block
+    # 3. Jaggards Britannia — use their 2023 product (random year available)
     (
-        '    # ══════════════════════════════════════════════════════════════════════════\n    # SILVER COINS — Kangaroo 1oz',
-        '''    # ══════════════════════════════════════════════════════════════════════════
-    # GOLD COINS — Britannia 1oz
-    # ══════════════════════════════════════════════════════════════════════════
-    "Gold Britannia 1oz": {
-        "metal": "gold", "category": "coin", "coin_type": "Britannia",
-        "weight_oz": 1.0, "min_aud": 6700, "max_aud": 9000,
-        "dealers": [
-            {"dealer": "KJC Bullion",     "url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2024-britannia-gold-bullion-coin/3003321"},
-            {"dealer": "ABC Bullion",     "url": "https://www.abcbullion.com.au/store/Bullion-Coins/royal-mint", "networkidle": True, "min_val": 6700},
-            {"dealer": "Ainslie Bullion", "url": "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Britannia-Gold-Coin/ID/674"},
-            {"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/royal-mint-britannia-gold-coin-1oz/"},
-            {"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/1oz-gold-britannia-coin/"},
-        ],
-    },
-
-    # ══════════════════════════════════════════════════════════════════════════
-    # SILVER COINS — Kangaroo 1oz''',
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/1oz-gold-britannia-coin/"},',
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/2023-1oz-great-britain-britannia-gold-coin-king-charles"},',
     ),
 
-    # 4. Add Silver Kookaburra after Silver Kangaroo block
+    # 4. Ainslie Britannia — fix URL
     (
-        '    # ══════════════════════════════════════════════════════════════════════════\n    # GOLD BARS — Perth Mint 1oz Cast',
-        '''    # ══════════════════════════════════════════════════════════════════════════
-    # SILVER COINS — Kookaburra 1oz
-    # ══════════════════════════════════════════════════════════════════════════
-    "Silver Kookaburra 1oz": {
-        "metal": "silver", "category": "coin", "coin_type": "Kookaburra",
-        "weight_oz": 1.0, "min_aud": 110, "max_aud": 250,
-        "dealers": [
-            {"dealer": "KJC Bullion",     "url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kookaburra-silver-bullion-coin/3003879"},
-            {"dealer": "Perth Mint",      "url": "https://www.perthmint.com/shop/bullion/bullion-coins/australian-kookaburra-2026-1oz-silver-bullion-coin/", "wait": 8000},
-            {"dealer": "Ainslie Bullion", "url": "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Coin-2026-Kookaburra-Perth-Mint/ID/678"},
-            {"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/perth-mint-2026-kookaburra-silver-coin-1-oz/"},
-            {"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/2026-1oz-perth-mint-silver-kookaburra-coin/"},
-            {"dealer": "Swan Bullion",    "url": "https://swanbullion.com/2026-kookaburra-1oz-silver-coin/"},
-            {"dealer": "Guardian Gold",   "url": "https://guardian-gold.com.au/product/1oz-silver-kookaburra-coin-2026/", "wait": 8000},
-        ],
-    },
+        '{"dealer": "Ainslie Bullion", "url": "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Britannia-Gold-Coin/ID/674"},',
+        '{"dealer": "Ainslie Bullion", "url": "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Gold-Britannia-Coin/ID/674"},',
+    ),
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # SILVER COINS — Maple Leaf 1oz
-    # ══════════════════════════════════════════════════════════════════════════
-    "Silver Maple Leaf 1oz": {
-        "metal": "silver", "category": "coin", "coin_type": "Maple Leaf",
-        "weight_oz": 1.0, "min_aud": 110, "max_aud": 250,
-        "dealers": [
-            {"dealer": "KJC Bullion",     "url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-canadian-maple-leaf-silver-bullion-coin/3003908"},
-            {"dealer": "ABC Bullion",     "url": "https://www.abcbullion.com.au/store/Bullion-Coins/silver-coins", "networkidle": True},
-            {"dealer": "Ainslie Bullion", "url": "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Maple-Leaf-2026/ID/679"},
-            {"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/rcm-silver-maple-leaf-coin-1oz/"},
-            {"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/2026-1oz-silver-maple-leaf-coin/"},
-            {"dealer": "Swan Bullion",    "url": "https://swanbullion.com/2026-maple-leaf-1oz-silver-coin/"},
-        ],
-    },
+    # 5. Gold Stackers Britannia — fix URL
+    (
+        '{"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/royal-mint-britannia-gold-coin-1oz/"},',
+        '{"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/royal-mint-1oz-gold-britannia-coin/"},',
+    ),
 
-    # ══════════════════════════════════════════════════════════════════════════
-    # GOLD BARS — Perth Mint 1oz Cast''',
+    # 6. Ainslie Kookaburra — fix URL
+    (
+        '{"dealer": "Ainslie Bullion", "url": "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Coin-2026-Kookaburra-Perth-Mint/ID/678"},',
+        '{"dealer": "Ainslie Bullion", "url": "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Kookaburra-Coin-2026-Perth-Mint/ID/678"},',
+    ),
+
+    # 7. Gold Stackers Kookaburra — fix URL
+    (
+        '{"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/perth-mint-2026-kookaburra-silver-coin-1-oz/"},',
+        '{"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/perth-mint-kookaburra-silver-coin-2026-1oz/"},',
+    ),
+
+    # 8. Jaggards Kookaburra — fix URL
+    (
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/2026-1oz-perth-mint-silver-kookaburra-coin/"},',
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/2026-kookaburra-1oz-silver-coin/"},',
+    ),
+
+    # 9. Gold Stackers Silver Maple Leaf — fix URL
+    (
+        '{"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/rcm-silver-maple-leaf-coin-1oz/"},',
+        '{"dealer": "Gold Stackers",   "url": "https://www.goldstackers.com.au/product/rcm-silver-maple-leaf-1oz-coin/"},',
+    ),
+
+    # 10. Jaggards Silver Maple Leaf — fix URL
+    (
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/2026-1oz-silver-maple-leaf-coin/"},',
+        '{"dealer": "Jaggards",        "url": "https://www.jaggards.com.au/product/2026-maple-leaf-1oz-silver-coin/"},',
+    ),
+
+    # 11. Swan Silver Maple Leaf — fix URL
+    (
+        '{"dealer": "Swan Bullion",    "url": "https://swanbullion.com/2026-maple-leaf-1oz-silver-coin/"},',
+        '{"dealer": "Swan Bullion",    "url": "https://swanbullion.com/2026-canadian-maple-leaf-1oz-silver-coin/"},',
     ),
 ]
 
@@ -87,7 +79,7 @@ for i, (old, new) in enumerate(changes, 1):
         print(f"  ✓ Change {i} applied")
         applied += 1
     else:
-        print(f"  ✗ Change {i} not found")
+        print(f"  ✗ Change {i} not found — skipping")
 
 with open("scraper_v2.py", "w", encoding="utf-8") as f:
     f.write(code)

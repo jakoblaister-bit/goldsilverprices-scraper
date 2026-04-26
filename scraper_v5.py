@@ -267,10 +267,10 @@ DEALERS = [
         "name": "KJC Bullion",
         "pages": [
             {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/australian-bullion-gold-coins/41/1",
-             "link_sel": "a[href*='/PD/']",
+             "link_sel": "a[href*='/PD/'], a[href*='kjc'][href*='gold']",
              "wait": 6000, "networkidle": True},
             {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/australian-bullion-silver-coins/42/1",
-             "link_sel": "a[href*='/PD/']",
+             "link_sel": "a[href*='/PD/'], a[href*='kjc'][href*='silver']",
              "wait": 6000, "networkidle": True},
             {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/perth-mint-gold-minted-bars/272/1",
              "link_sel": "a[href*='/PD/']",
@@ -331,7 +331,6 @@ async def get_links(page, page_config, base_url):
                 "/category/", "/tag/", "/page/", "product-category",
                 "/buy/gold/$", "/buy/silver/$",
                 "javascript:", "mailto:",
-                ".pdf", ".zip", ".xlsx", ".doc",
             ]):
                 continue
             if href.rstrip("/") == base_url.rstrip("/"):
@@ -463,7 +462,7 @@ async def main():
         browser = await pw.chromium.launch(
             headless=True,
             args=["--no-sandbox", "--disable-blink-features=AutomationControlled",
-                  "--disable-web-security", "--disable-downloads"]
+                  "--disable-web-security"]
         )
         context = await browser.new_context(
             user_agent=(
@@ -473,7 +472,6 @@ async def main():
             ),
             viewport={"width": 1280, "height": 900},
             extra_http_headers={"Accept-Language": "en-AU,en;q=0.9"},
-            accept_downloads=False,
         )
         page = await context.new_page()
 
