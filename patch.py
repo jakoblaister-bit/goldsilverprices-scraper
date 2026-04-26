@@ -1,18 +1,12 @@
-with open(".github/workflows/scraper.yml", "r") as f:
+with open("scraper.py", "r", encoding="utf-8") as f:
     code = f.read()
 
-# Increase timeout for v5 which takes longer
-code = code.replace("timeout-minutes: 15", "timeout-minutes: 45")
+# Try different silver URLs for Ainslie
+code = code.replace(
+    '"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver/ID/14",',
+    '"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver-Coins/ID/3",',
+)
 
-# Remove Excel artifact upload — not used
-code = code.replace("""      - name: Upload Excel as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: bullion-prices
-          path: bullion_prices_*.xlsx
-          retention-days: 7""", "")
-
-with open(".github/workflows/scraper.yml", "w") as f:
+with open("scraper.py", "w", encoding="utf-8") as f:
     f.write(code)
-
 print("Done")

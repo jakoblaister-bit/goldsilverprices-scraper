@@ -10,6 +10,7 @@ import asyncio
 import json
 import re
 import urllib.request
+import urllib.parse
 from datetime import datetime
 from playwright.async_api import async_playwright
 import os
@@ -189,8 +190,46 @@ def extract_price_from_text(text, parsed):
     count = Counter(candidates)
     return min(count, key=lambda x: -count[x])
 
+def delete_existing(row):
+    """Delete existing price for same dealer+product+weight before inserting."""
+    try:
+        metal    = row.get("metal", "")
+        category = row.get("category", "")
+        dealer   = row.get("dealer", "")
+        coin     = row.get("coin_type")
+        brand    = row.get("bar_brand")
+        bar_type = row.get("bar_type")
+        woz      = row.get("weight_oz")
+        wg       = row.get("weight_g")
+
+        # Build filter query
+        filters = [
+            f"dealer=eq.{urllib.parse.quote(dealer)}",
+            f"metal=eq.{metal}",
+            f"category=eq.{category}",
+        ]
+        if coin:    filters.append(f"coin_type=eq.{urllib.parse.quote(coin)}")
+        else:       filters.append("coin_type=is.null")
+        if brand:   filters.append(f"bar_brand=eq.{urllib.parse.quote(brand)}")
+        else:       filters.append("bar_brand=is.null")
+        if bar_type: filters.append(f"bar_type=eq.{bar_type}")
+        if woz is not None: filters.append(f"weight_oz=eq.{woz}")
+        else:               filters.append("weight_oz=is.null")
+        if wg is not None:  filters.append(f"weight_g=eq.{wg}")
+        else:               filters.append("weight_g=is.null")
+
+        url = f"{SUPABASE_URL}/rest/v1/prices_v2?{'&'.join(filters)}"
+        req = urllib.request.Request(url, headers=DB_HEADERS, method="DELETE")
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            pass
+    except Exception as e:
+        pass  # Non-critical — insert will still work
+
 def save_to_db(row):
     try:
+        # Delete old price first — prevents duplicates
+        delete_existing(row)
+        # Insert fresh price
         payload = json.dumps(row).encode("utf-8")
         req = urllib.request.Request(
             f"{SUPABASE_URL}/rest/v1/prices_v2",
@@ -209,7 +248,7 @@ DEALERS = [
         "pages": [
             {"url": "https://ainsliebullion.com.au/Buy/Keyword/Gold-Coins/ID/13",
              "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
-            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver-Coins/ID/14",
+            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver-Coins/ID/3",
              "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
             {"url": "https://ainsliebullion.com.au/Buy/Keyword/Gold-Bars/ID/15",
              "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
