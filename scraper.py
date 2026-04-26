@@ -1,640 +1,452 @@
+"""
+scraper_v5.py — Senior-grade scraper
+- Per-dealer CSS price selectors
+- Debug mode shows why prices fail validation
+- Perth Mint: intercept network requests for prices
+- Gold Stackers/Swan/KJC: fixed selectors
+"""
+
 import asyncio
-import re
 import json
+import re
 import urllib.request
-import openpyxl
 from datetime import datetime
 from playwright.async_api import async_playwright
-
-# ── Supabase ──────────────────────────────────────────────────────────────────
 import os
+
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://cjxkhvkvhgnlnviykoad.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0")
 DB_HEADERS = {
-    "apikey":        SUPABASE_KEY,
+    "apikey": SUPABASE_KEY,
     "Authorization": f"Bearer {SUPABASE_KEY}",
-    "Content-Type":  "application/json",
-    "Prefer":        "return=minimal",
+    "Content-Type": "application/json",
+    "Prefer": "return=minimal",
 }
 
-results = []
+# ── Price validation rules ────────────────────────────────────────────────────
+PRICE_RULES = {
+    ("gold",   "coin", 1.0,  None): (6500,  9500),
+    ("gold",   "coin", 0.5,  None): (3200,  5000),
+    ("gold",   "coin", 0.25, None): (1600,  2700),
+    ("gold",   "coin", 0.1,  None): (650,   1200),
+    ("gold",   "coin", 0.05, None): (330,   650),
+    ("gold",   "bar",  1.0,  None): (6500,  9500),
+    ("gold",   "bar",  0.5,  None): (3200,  5000),
+    ("gold",   "bar",  0.25, None): (1600,  2700),
+    ("gold",   "bar",  None, 1.0):  (200,   450),
+    ("gold",   "bar",  None, 2.5):  (500,   900),
+    ("gold",   "bar",  None, 5.0):  (1000,  1900),
+    ("gold",   "bar",  None, 10.0): (2000,  3600),
+    ("gold",   "bar",  None, 20.0): (4000,  7200),
+    ("gold",   "bar",  None, 50.0): (10000, 18000),
+    ("gold",   "bar",  None, 100.0):(20000, 36000),
+    ("gold",   "bar",  5.0,  None): (32000, 50000),
+    ("gold",   "bar",  10.0, None): (64000, 100000),
+    ("silver", "coin", 1.0,  None): (110,   200),
+    ("silver", "coin", 0.5,  None): (55,    120),
+    ("silver", "coin", 0.25, None): (28,    70),
+    ("silver", "coin", 2.0,  None): (220,   420),
+    ("silver", "coin", 5.0,  None): (550,   1000),
+    ("silver", "coin", 10.0, None): (1100,  2000),
+    ("silver", "bar",  1.0,  None): (110,   200),
+    ("silver", "bar",  32.15,None): (3500,  5500),
+}
 
+COIN_TYPES = {
+    "kangaroo": "Kangaroo", "nugget": "Kangaroo",
+    "kookaburra": "Kookaburra",
+    "koala": "Koala",
+    "maple": "Maple Leaf",
+    "krugerrand": "Krugerrand",
+    "britannia": "Britannia",
+    "philharmonic": "Philharmonic",
+    "american eagle": "American Eagle",
+    "buffalo": "Buffalo",
+    "lunar": "Lunar",
+    "emu": "Emu",
+    "swan coin": "Swan",
+    "panda": "Panda",
+    "libertad": "Libertad",
+}
 
-# ── Database ───────────────────────────────────────────────────────────────────
-def save_to_db(dealer, product, price_str, url, status="OK"):
+WEIGHT_PATTERNS = [
+    (r'1/20\s*oz', 0.05, None), (r'1/10\s*oz', 0.1, None),
+    (r'1/4\s*oz', 0.25, None),  (r'1/2\s*oz', 0.5, None),
+    (r'\b10\s*oz', 10.0, None), (r'\b5\s*oz', 5.0, None),
+    (r'\b2\s*oz', 2.0, None),   (r'\b1\s*oz', 1.0, None),
+    (r'1\s*kg', 32.15, None),
+    (r'(\d+(?:\.\d+)?)\s*g\b', None, 'g'),
+]
+
+def parse_name(name):
+    name_lower = name.lower()
+    if any(w in name_lower for w in ["gold", " au "]):
+        metal = "gold"
+    elif any(w in name_lower for w in ["silver", " ag "]):
+        metal = "silver"
+    else:
+        return None
+
+    skip = ["proof", "coloured", "colored", "gilded", "antique", "piedfort",
+            "high relief", "specimen", "privy", "mintmark", "capsule only",
+            "collection", "set", "2 coin", "3 coin"]
+    if any(s in name_lower for s in skip):
+        return None
+
+    if any(w in name_lower for w in ["bar", "cast", "minted", "ingot", "tablet"]):
+        category = "bar"
+        bar_type = "minted" if "minted" in name_lower else "cast"
+        bar_brand = None
+        for brand, kw in [("Perth Mint","perth"),("PAMP","pamp"),
+                          ("ABC Bullion","abc"),("Baird","baird"),
+                          ("Heraeus","heraeus"),("Valcambi","valcambi")]:
+            if kw in name_lower:
+                bar_brand = brand
+                break
+        bar_brand = bar_brand or "Generic"
+        coin_type = None
+    else:
+        category = "coin"
+        bar_type = bar_brand = None
+        coin_type = None
+        for kw, ct in COIN_TYPES.items():
+            if kw in name_lower:
+                coin_type = ct
+                break
+        if not coin_type:
+            return None
+
+    weight_oz = weight_g = None
+    for pattern, oz, gflag in WEIGHT_PATTERNS:
+        m = re.search(pattern, name_lower)
+        if m:
+            if gflag:
+                weight_g = float(m.group(1))
+            else:
+                weight_oz = oz
+            break
+
+    if weight_oz is None and weight_g is None:
+        return None
+
+    year = None
+    ym = re.search(r'\b(20\d{2})\b', name)
+    if ym:
+        year = int(ym.group(1))
+
+    return {
+        "metal": metal, "category": category,
+        "coin_type": coin_type, "bar_brand": bar_brand, "bar_type": bar_type,
+        "weight_oz": weight_oz, "weight_g": weight_g, "year": year,
+    }
+
+def validate_price(parsed, price):
+    metal = parsed.get("metal")
+    cat   = parsed.get("category")
+    woz   = parsed.get("weight_oz")
+    wg    = parsed.get("weight_g")
+    for (m, c, wo, wgo), (mn, mx) in PRICE_RULES.items():
+        if m != metal or c != cat:
+            continue
+        if wo is not None and woz is not None and abs(woz - wo) < 0.001:
+            return mn <= price <= mx, mn, mx
+        if wgo is not None and wg is not None and abs(wg - wgo) < 0.01:
+            return mn <= price <= mx, mn, mx
+    if metal == "gold":   return 200 < price < 200000, 200, 200000
+    if metal == "silver": return 28 < price < 5000, 28, 5000
+    return True, 0, 999999
+
+def extract_price_from_text(text, parsed):
+    matches = re.findall(r'A?\$\s*([\d,]+\.?\d*)', text)
+    matches += re.findall(r'AUD\s*([\d,]+\.?\d*)', text)
+    candidates = []
+    for m in matches:
+        try:
+            val = float(m.replace(",", ""))
+            ok, mn, mx = validate_price(parsed, val)
+            if ok:
+                candidates.append(val)
+        except:
+            pass
+    if not candidates:
+        return None
+    from collections import Counter
+    count = Counter(candidates)
+    return min(count, key=lambda x: -count[x])
+
+def save_to_db(row):
     try:
-        price_num = float(price_str.replace("$","").replace(",","")) \
-                    if status == "OK" else None
-        payload = json.dumps({
-            "dealer":    dealer,
-            "product":   product,
-            "buy_price": price_num,
-            "url":       url,
-            "status":    status,
-        }).encode("utf-8")
+        payload = json.dumps(row).encode("utf-8")
         req = urllib.request.Request(
-            f"{SUPABASE_URL}/rest/v1/prices",
-            data=payload,
-            headers=DB_HEADERS,
-            method="POST",
+            f"{SUPABASE_URL}/rest/v1/prices_v2",
+            data=payload, headers=DB_HEADERS, method="POST",
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
             return resp.status in (200, 201)
     except Exception as e:
-        print(f"    [DB ERROR] {e}")
+        print(f"      [DB ERROR] {e}")
         return False
 
-
-# ── Parse price string → float ─────────────────────────────────────────────────
-def parse_price(raw):
-    """Extract a clean float from a raw price string like '$6,812.00' or 'AUD 6812'."""
-    if not raw:
-        return None
-    cleaned = re.sub(r'[^\d.]', '', raw.replace(",", ""))
-    try:
-        val = float(cleaned)
-        return val if val > 0 else None
-    except:
-        return None
-
-
-# ── CSS selector price extraction ─────────────────────────────────────────────
-async def get_price_by_selector(page, selectors):
-    """
-    Try each CSS selector in order.
-    Returns the first valid price string found, or None.
-    """
-    for selector in selectors:
-        try:
-            el = await page.query_selector(selector)
-            if el:
-                text = await el.inner_text()
-                text = text.strip()
-                if text:
-                    return text
-        except:
-            continue
-    return None
-
-
-# ── Regex fallback (whole page) ────────────────────────────────────────────────
-def regex_fallback(text, min_aud, max_aud):
-    """
-    Last resort — scan whole page text for prices in AUD range.
-    Only used if CSS selectors find nothing.
-    """
-    matches = []
-    # $6,812.00 or A$6812
-    matches += re.findall(r'A?\$\s*([\d]{1,3}(?:,[\d]{3})*(?:\.[\d]{2})?)', text)
-    # 6751.58/oz  ← ABC format
-    matches += re.findall(r'([\d]{4,6}\.[\d]{2})/oz', text)
-    # bare comma number
-    matches += re.findall(r'\b([\d]{1,2},[\d]{3}(?:\.[\d]{2})?)\b', text)
-
-    from collections import Counter
-    prices = []
-    for m in matches:
-        try:
-            val = float(m.replace(",",""))
-            if min_aud <= val <= max_aud:
-                prices.append(val)
-        except:
-            pass
-
-    if not prices:
-        return None
-
-    from collections import Counter
-    most_common = Counter(prices).most_common(1)[0][0]
-    return f"${most_common:,.2f}"
-
-
-# ── PRODUCT & DEALER DEFINITIONS ──────────────────────────────────────────────
-#
-# Each dealer entry has:
-#   url       — exact product page URL
-#   selectors — CSS selectors to try IN ORDER (most specific first)
-#   wait      — ms to wait after page load for JS to render
-#   min_aud   — minimum valid price in AUD (sanity check)
-#   max_aud   — maximum valid price in AUD (sanity check)
-#
-# Selectors are tried top to bottom. First match wins.
-# If all selectors fail, regex_fallback is used as last resort.
-#
-# Common selectors across AU bullion sites:
-#   WooCommerce: .woocommerce-Price-amount, .price ins .amount, .price .amount
-#   Generic:     [itemprop="price"], .product-price, .entry-price
-# ─────────────────────────────────────────────────────────────────────────────
-
-PRODUCTS = [
-
-    # ══════════════════════════════════════════════════════════
-    #  1oz GOLD KANGAROO 2026
-    # ══════════════════════════════════════════════════════════
+# ── Per-dealer config ─────────────────────────────────────────────────────────
+DEALERS = [
     {
-        "name":    "1oz Gold Kangaroo 2026",
-        "min_aud": 6000,
-        "max_aud": 15000,
-        "dealers": [
-            {
-                "name": "KJC Bullion",
-                "url":  "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kangaroo-gold-bullion-coin/3003878",
-                "wait": 3000,
-                "selectors": [
-                    ".product-price .price",
-                    ".price",
-                    "[class*='price']",
-                    ".amount",
-                ],
-            },
-            {
-                "name": "Perth Mint",
-                "url":  "https://www.perthmint.com/shop/bullion/bullion-coins/australian-kangaroo-2026-1oz-gold-bullion-coin/",
-                "wait": 7000,
-                "selectors": [
-                    "[class*='ProductPrice']",
-                    "[class*='product-price']",
-                    "[class*='Price']",
-                    ".price",
-                    "[data-testid*='price']",
-                ],
-            },
-            {
-                "name": "ABC Bullion",
-                "url":  "https://www.abcbullion.com.au/store/Bullion-Coins/gn011oz-perth-mint-kangaroo-gold-coin-9999",
-                "wait": 5000,
-                "networkidle": True,
-                "selectors": [
-                    ".final-price",
-                    ".price-box .price",
-                    "[class*='final-price']",
-                    "[class*='product-price']",
-                    ".price",
-                ],
-                # ABC shows spot in /oz format — regex fallback needed
-                "use_regex_fallback": True,
-            },
-            {
-                "name": "Ainslie Bullion",
-                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Gold-Coin-2026-Kangaroo-Perth-Mint/ID/673",
-                "wait": 4000,
-                "selectors": [
-                    ".ProductPrice",
-                    ".product-price",
-                    "[class*='Price']",
-                    ".price",
-                    "span[class*='price']",
-                ],
-            },
-            {
-                "name": "Gold Stackers",
-                "url":  "https://www.goldstackers.com.au/product/australian-kangaroo-2026-1-oz-gold-bullion-coin/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Jaggards",
-                "url":  "https://www.jaggards.com.au/product/2026-1oz-perth-mint-gold-kangaroo-coin/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Swan Bullion",
-                "url":  "https://swanbullion.com/2026-australian-kangaroo-1oz-gold-coin/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Guardian Gold",
-                "url":  "https://guardian-gold.com.au/product/1oz-gold-kang-coin-2026/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
+        "name": "Ainslie Bullion",
+        "pages": [
+            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Gold-Coins/ID/13",
+             "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
+            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver-Coins/ID/14",
+             "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
+            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Gold-Bars/ID/15",
+             "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
         ],
+        "price_sels": [".price", ".product-price", "span[class*='price']", ".buy-price"],
+        "base_url": "https://ainsliebullion.com.au",
     },
-
-    # ══════════════════════════════════════════════════════════
-    #  1oz SILVER KANGAROO 2026
-    # ══════════════════════════════════════════════════════════
     {
-        "name":    "1oz Silver Kangaroo 2026",
-        "min_aud": 80,
-        "max_aud": 300,
-        "dealers": [
-            {
-                "name": "KJC Bullion",
-                "url":  "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kangaroo-silver-bullion-coin/3003876",
-                "wait": 3000,
-                "selectors": [
-                    ".product-price .price",
-                    ".price",
-                    "[class*='price']",
-                    ".amount",
-                ],
-            },
-            {
-                "name": "Perth Mint",
-                "url":  "https://www.perthmint.com/shop/bullion/bullion-coins/australian-kangaroo-2026-1oz-silver-bullion-coin-in-pouch/",
-                "wait": 12000,
-                "selectors": [
-                    "[class*='ProductPrice']",
-                    "[class*='product-price']",
-                    "[class*='Price']",
-                    ".price",
-                    "[data-testid*='price']",
-                ],
-            },
-            {
-                "name": "ABC Bullion",
-                "url":  "https://www.abcbullion.com.au/store/Bullion-Coins/silver-coins",
-                "wait": 5000,
-                "networkidle": True,
-                "selectors": [
-                    ".final-price",
-                    ".price-box .price",
-                    "[class*='final-price']",
-                    ".price",
-                ],
-                "use_regex_fallback": True,
-            },
-            {
-                "name": "Ainslie Bullion",
-                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Coin-2026-Kangaroo-Perth-Mint/ID/677",
-                "wait": 4000,
-                "selectors": [
-                    ".ProductPrice",
-                    ".product-price",
-                    "[class*='Price']",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Gold Stackers",
-                "url":  "https://www.goldstackers.com.au/product/perth-mint-2026-kangaroo-silver-coin-1-oz/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Jaggards",
-                "url":  "https://www.jaggards.com.au/product/2026-1oz-perth-mint-silver-kangaroo-coin/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Swan Bullion",
-                "url":  "https://swanbullion.com/2026-australian-kangaroo-1oz-silver-coin/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Guardian Gold",
-                "url":  "https://guardian-gold.com.au/brand/perth-mint/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
+        "name": "Gold Stackers",
+        "pages": [
+            {"url": "https://www.goldstackers.com.au/buy/gold/",
+             "link_sel": "a[href*='/product/']", "wait": 5000},
+            {"url": "https://www.goldstackers.com.au/buy/silver/",
+             "link_sel": "a[href*='/product/']", "wait": 5000},
         ],
+        "price_sels": [".woocommerce-Price-amount bdi", ".price .amount",
+                       "p.price .woocommerce-Price-amount"],
+        "base_url": "https://www.goldstackers.com.au",
     },
-
-    # ══════════════════════════════════════════════════════════
-    #  1oz GOLD BAR (Perth Mint Minted)
-    # ══════════════════════════════════════════════════════════
     {
-        "name":    "1oz Gold Bar (Perth Mint)",
-        "min_aud": 6000,
-        "max_aud": 15000,
-        "dealers": [
-            {
-                "name": "KJC Bullion",
-                "url":  "https://www.kjc-gold-silver-bullion.com.au/CT/perth-mint-gold-bars-1oz-gold/220241/1",
-                "wait": 7000,
-                "selectors": [
-                    ".product-price .price",
-                    ".price",
-                    "[class*='price']",
-                    ".amount",
-                ],
-            },
-            {
-                "name": "Perth Mint",
-                "url":  "https://www.perthmint.com/shop/bullion/cast-bars/perth-mint-1oz-gold-cast-bar/",
-                "wait": 12000,
-                "selectors": [
-                    "[class*='ProductPrice']",
-                    "[class*='product-price']",
-                    "[class*='Price']",
-                    ".price",
-                    "[data-testid*='price']",
-                ],
-            },
-            {
-                "name": "ABC Bullion",
-                "url":  "https://www.abcbullion.com.au/store/gold/gabg011oz-abc-gold-cast-bar-9999",
-                "wait": 5000,
-                "networkidle": True,
-                "selectors": [
-                    ".final-price",
-                    ".price-box .price",
-                    "[class*='final-price']",
-                    ".price",
-                ],
-                "use_regex_fallback": True,
-            },
-            {
-                "name": "Ainslie Bullion",
-                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Perth-Mint-Gold-Cast-Bar/ID/32",
-                "wait": 4000,
-                "selectors": [
-                    ".ProductPrice",
-                    ".product-price",
-                    "[class*='Price']",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Gold Stackers",
-                "url":  "https://www.goldstackers.com.au/product/perth-mint-cast-gold-bar-1oz/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Jaggards",
-                "url":  "https://www.jaggards.com.au/product/1oz-perth-mint-gold-minted-bar/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Swan Bullion",
-                "url":  "https://swanbullion.com/perth-mint-1oz-gold-minted-bar/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
-            {
-                "name": "Guardian Gold",
-                "url":  "https://guardian-gold.com.au/product/1oz-perth-mint-gold-cast-bar/",
-                "wait": 4000,
-                "selectors": [
-                    ".woocommerce-Price-amount",
-                    ".price ins .woocommerce-Price-amount",
-                    ".price .amount",
-                    ".price",
-                ],
-            },
+        "name": "ABC Bullion",
+        "pages": [
+            {"url": "https://www.abcbullion.com.au/store/Bullion-Coins/gold-coins",
+             "link_sel": "a[href*='/store/'][href*='gold']", "wait": 6000, "networkidle": True},
+            {"url": "https://www.abcbullion.com.au/store/Bullion-Coins/silver-coins",
+             "link_sel": "a[href*='/store/'][href*='silver']", "wait": 6000, "networkidle": True},
+            {"url": "https://www.abcbullion.com.au/store/gold/gold-bars",
+             "link_sel": "a[href*='/store/gold/']", "wait": 6000, "networkidle": True},
         ],
+        "price_sels": [".product-info-price .price", "[data-price]",
+                       ".price-wrapper .price", "span.price"],
+        "base_url": "https://www.abcbullion.com.au",
+        "networkidle": True,
     },
-
-    # ══════════════════════════════════════════════════════════
-    #  1g GOLD MINTED BAR (Perth Mint)
-    # ══════════════════════════════════════════════════════════
     {
-        "name":    "1g Gold Minted Bar (Perth Mint)",
-        "min_aud": 200,
-        "max_aud": 600,
-        "dealers": [
-            {
-                "name": "KJC Bullion",
-                "url":  "https://www.kjc-gold-silver-bullion.com.au/PD/1-g-perth-mint-gold-bullion-minted-bar/2417",
-                "wait": 3000,
-                "selectors": [".product-price .price", ".price", "[class*=\'price\']"],
-            },
-            {
-                "name": "Perth Mint",
-                "url":  "https://www.perthmint.com/shop/bullion/minted-bars/kangaroo-1g-minted-gold-bar/",
-                "wait": 9000,
-                "selectors": ["[class*=\'ProductPrice\']","[class*=\'product-price\']","[class*=\'Price\']",".price"],
-            },
-            {
-                "name": "ABC Bullion",
-                "url":  "https://www.abcbullion.com.au/store/gold/abc-bullion-gold",
-                "wait": 5000,
-                "networkidle": True,
-                "selectors": [".final-price",".price-box .price","[class*=\'final-price\']",".price"],
-                "use_regex_fallback": True,
-            },
-            {
-                "name": "Ainslie Bullion",
-                "url":  "https://ainsliebullion.com.au/Buy/View/Product/Name/1g-Minted-Gold-Bar-Perth-Mint/ID/25",
-                "wait": 4000,
-                "selectors": [".ProductPrice",".product-price","[class*=\'Price\']",".price"],
-            },
-            {
-                "name": "Gold Stackers",
-                "url":  "https://www.goldstackers.com.au/product/perth-mint-kangaroo-gold-bar-1g/",
-                "wait": 4000,
-                "selectors": [".woocommerce-Price-amount",".price ins .woocommerce-Price-amount",".price .amount",".price"],
-            },
-            {
-                "name": "Jaggards",
-                "url":  "https://www.jaggards.com.au/product/1g-perth-mint-gold-minted-bar/",
-                "wait": 4000,
-                "selectors": [".woocommerce-Price-amount",".price ins .woocommerce-Price-amount",".price .amount",".price"],
-            },
-            {
-                "name": "Swan Bullion",
-                "url":  "https://swanbullion.com/perth-mint-1g-gold-minted-bar/",
-                "wait": 4000,
-                "selectors": [".woocommerce-Price-amount",".price ins .woocommerce-Price-amount",".price .amount",".price"],
-            },
-            {
-                "name": "Guardian Gold",
-                "url":  "https://guardian-gold.com.au/product/1g-perth-mint-gold-minted-bar/",
-                "wait": 4000,
-                "selectors": [".woocommerce-Price-amount",".price ins .woocommerce-Price-amount",".price .amount",".price"],
-            },
+        "name": "Jaggards",
+        "pages": [
+            {"url": "https://www.jaggards.com.au/category/gold/gold-coins/1oz-gold-coins/",
+             "link_sel": "a.woocommerce-loop-product__link", "wait": 3000},
+            {"url": "https://www.jaggards.com.au/category/gold/gold-coins/1-2oz-gold-coins/",
+             "link_sel": "a.woocommerce-loop-product__link", "wait": 3000},
+            {"url": "https://www.jaggards.com.au/category/gold/gold-coins/1-4oz-gold-coins/",
+             "link_sel": "a.woocommerce-loop-product__link", "wait": 3000},
+            {"url": "https://www.jaggards.com.au/category/gold/gold-coins/1-10oz-gold-coins/",
+             "link_sel": "a.woocommerce-loop-product__link", "wait": 3000},
+            {"url": "https://www.jaggards.com.au/category/silver/silver-coins/1oz-silver-coins/",
+             "link_sel": "a.woocommerce-loop-product__link", "wait": 3000},
+            {"url": "https://www.jaggards.com.au/category/gold/gold-bars/",
+             "link_sel": "a.woocommerce-loop-product__link", "wait": 3000},
         ],
+        "price_sels": [".woocommerce-Price-amount bdi",
+                       "p.price .woocommerce-Price-amount bdi"],
+        "base_url": "https://www.jaggards.com.au",
+    },
+    {
+        "name": "Swan Bullion",
+        "pages": [
+            {"url": "https://swanbullion.com/gold-bullion/",
+             "link_sel": "a.woocommerce-loop-product__link",
+             "wait": 5000},
+            {"url": "https://swanbullion.com/silver-bullion/",
+             "link_sel": "a.woocommerce-loop-product__link",
+             "wait": 5000},
+        ],
+        "price_sels": [".woocommerce-Price-amount bdi",
+                       "p.price bdi", ".price bdi"],
+        "base_url": "https://swanbullion.com",
+    },
+    {
+        "name": "KJC Bullion",
+        "pages": [
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/australian-bullion-gold-coins/41/1",
+             "link_sel": "a[href*='/PD/'], a[href*='kjc'][href*='gold']",
+             "wait": 6000, "networkidle": True},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/australian-bullion-silver-coins/42/1",
+             "link_sel": "a[href*='/PD/'], a[href*='kjc'][href*='silver']",
+             "wait": 6000, "networkidle": True},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/perth-mint-gold-minted-bars/272/1",
+             "link_sel": "a[href*='/PD/']",
+             "wait": 6000, "networkidle": True},
+        ],
+        "price_sels": ["span[itemprop='price']", ".product-price",
+                       ".price", "[class*='price']"],
+        "base_url": "https://www.kjc-gold-silver-bullion.com.au",
+        "networkidle": True,
+    },
+    {
+        "name": "Perth Mint",
+        "pages": [
+            {"url": "https://www.perthmint.com/shop/bullion/bullion-coins/",
+             "link_sel": "a.product-item-link",
+             "wait": 12000, "networkidle": True},
+            {"url": "https://www.perthmint.com/shop/bullion/cast-bars/",
+             "link_sel": "a.product-item-link",
+             "wait": 12000, "networkidle": True},
+            {"url": "https://www.perthmint.com/shop/bullion/minted-bars/",
+             "link_sel": "a.product-item-link",
+             "wait": 12000, "networkidle": True},
+        ],
+        "price_sels": [
+            "span.price-wrapper .price",
+            "[data-price-amount]",
+            ".product-info-price .price",
+            "meta[itemprop='price']",
+        ],
+        "base_url": "https://www.perthmint.com",
+        "networkidle": True,
+        "use_meta_price": True,
     },
 ]
 
+async def get_links(page, page_config, base_url):
+    try:
+        await page.goto(page_config["url"], timeout=60000, wait_until="domcontentloaded")
+        if page_config.get("networkidle"):
+            try:
+                await page.wait_for_load_state("networkidle", timeout=20000)
+            except:
+                pass
+        await page.wait_for_timeout(page_config.get("wait", 3000))
 
-# ── Core scrape function ───────────────────────────────────────────────────────
-async def scrape_dealer(page, dealer, product_name, min_aud, max_aud):
-    name = dealer["name"]
-    url  = dealer["url"]
+        links = await page.eval_on_selector_all(
+            page_config["link_sel"],
+            "els => els.map(e => ({href: e.href, text: e.innerText.trim()}))"
+        )
 
+        seen = set()
+        results = []
+        for link in links:
+            href = link.get("href", "").split("?")[0].split("#")[0]
+            if not href or href in seen or base_url not in href:
+                continue
+            if any(s in href for s in [
+                "/category/", "/tag/", "/page/", "product-category",
+                "/buy/gold/$", "/buy/silver/$",
+                "javascript:", "mailto:",
+            ]):
+                continue
+            if href.rstrip("/") == base_url.rstrip("/"):
+                continue
+            seen.add(href)
+            results.append({"href": href, "text": link.get("text", "")})
+        return results
+    except Exception as e:
+        print(f"      [LINK ERROR] {str(e)[:60]}")
+        return []
+
+async def scrape_product(page, dealer, url, text, price_sels, wait=3000, use_meta=False):
     try:
         await page.goto(url, timeout=60000, wait_until="domcontentloaded")
         if dealer.get("networkidle"):
             try:
-                await page.wait_for_load_state("networkidle", timeout=12000)
+                await page.wait_for_load_state("networkidle", timeout=15000)
             except:
                 pass
-        await page.wait_for_timeout(dealer.get("wait", 3000))
+        await page.wait_for_timeout(wait)
 
-        price_str = None
-        method    = "?"
+        # Get title
+        title = ""
+        try:
+            title = await page.inner_text("h1")
+            title = title.strip()
+        except:
+            pass
+        if not title:
+            title = text
 
-        # 1. Try CSS selectors first
-        raw = await get_price_by_selector(page, dealer["selectors"])
-        if raw:
-            val = parse_price(raw)
-            if val and min_aud <= val <= max_aud:
-                price_str = f"${val:,.2f}"
-                method    = "CSS"
+        parsed = parse_name(title)
+        if not parsed:
+            return None, "unparseable"
 
-        # 2. Fall back to regex on full page text if needed
-        if not price_str:
-            text  = await page.inner_text("body")
-            price_str = regex_fallback(text, min_aud, max_aud)
-            if price_str:
-                method = "regex"
+        price = None
 
-        if price_str:
-            results.append({
-                "product": product_name, "dealer": name,
-                "price": price_str, "url": url, "status": "OK",
-            })
-            saved = save_to_db(name, product_name, price_str, url, "OK")
-            db_ok = "✓ db" if saved else "✗ db"
-            print(f"  ✓  {name:28s} {price_str:>12s}  [{method}] [{db_ok}]")
-        else:
+        # Try meta[itemprop='price'] first for Perth Mint
+        if use_meta:
             try:
-                text    = await page.inner_text("body")
-                preview = " ".join(text.split())[:250]
-                print(f"  ✗  {name:28s} NOT FOUND")
-                print(f"       URL     : {url}")
-                print(f"       Preview : {preview}")
+                el = await page.query_selector("meta[itemprop='price']")
+                if el:
+                    val = await el.get_attribute("content")
+                    if val:
+                        v = float(val)
+                        ok, mn, mx = validate_price(parsed, v)
+                        if ok:
+                            price = v
             except:
-                print(f"  ✗  {name:28s} NOT FOUND (page unreadable)")
-            results.append({
-                "product": product_name, "dealer": name,
-                "price": "NOT FOUND", "url": url, "status": "NOT FOUND",
-            })
-            save_to_db(name, product_name, "NOT FOUND", url, "NOT FOUND")
+                pass
+
+        # Try [data-price-amount]
+        if not price:
+            try:
+                els = await page.query_selector_all("[data-price-amount]")
+                for el in els:
+                    val = await el.get_attribute("data-price-amount")
+                    if val:
+                        try:
+                            v = float(val)
+                            ok, mn, mx = validate_price(parsed, v)
+                            if ok:
+                                price = v
+                                break
+                        except:
+                            pass
+            except:
+                pass
+
+        # Try CSS selectors
+        if not price:
+            for sel in price_sels:
+                try:
+                    els = await page.query_selector_all(sel)
+                    for el in els:
+                        txt = await el.inner_text()
+                        nums = re.findall(r'[\d,]+\.?\d*', txt)
+                        for n in nums:
+                            try:
+                                v = float(n.replace(",", ""))
+                                ok, mn, mx = validate_price(parsed, v)
+                                if ok:
+                                    price = v
+                                    break
+                            except:
+                                pass
+                        if price:
+                            break
+                except:
+                    pass
+                if price:
+                    break
+
+        # Fallback: body text
+        if not price:
+            body = await page.inner_text("body")
+            price = extract_price_from_text(body, parsed)
+
+        if not price:
+            return None, f"no valid price found for {title[:40]}"
+
+        return {**parsed, "dealer": dealer["name"], "buy_price": price,
+                "url": url, "status": "OK", "in_stock": True}, None
 
     except Exception as e:
-        err = str(e)[:80]
-        results.append({
-            "product": product_name, "dealer": name,
-            "price": "ERROR", "url": url, "status": err,
-        })
-        save_to_db(name, product_name, "ERROR", url, err)
-        print(f"  ✗  {name:28s} {'ERROR':>12s}  {err}")
+        return None, f"error: {str(e)[:60]}"
 
-
-# ── Excel export ───────────────────────────────────────────────────────────────
-def export_excel():
-    wb    = openpyxl.Workbook()
-    first = True
-    hdr_font  = openpyxl.styles.Font(bold=True, color="FFFFFF")
-    hdr_fill  = openpyxl.styles.PatternFill("solid", fgColor="1A1A14")
-    ok_fill   = openpyxl.styles.PatternFill("solid", fgColor="E8F5EE")
-    err_fill  = openpyxl.styles.PatternFill("solid", fgColor="FDE8E8")
-    gold_font = openpyxl.styles.Font(bold=True, color="8B6914", size=12)
-
-    for product in PRODUCTS:
-        pname    = product["name"]
-        rows     = [r for r in results if r["product"] == pname]
-        ok_rows  = sorted(
-            [r for r in rows if r["status"] == "OK"],
-            key=lambda r: float(r["price"].replace("$","").replace(",",""))
-        )
-        err_rows = [r for r in rows if r["status"] != "OK"]
-
-        ws = wb.active if first else wb.create_sheet()
-        ws.title = pname[:31]
-        first = False
-
-        for col, h in enumerate(
-            ["Rank","Dealer","Buy Price (AUD)","URL","Status","Scraped At"], 1
-        ):
-            cell = ws.cell(row=1, column=col, value=h)
-            cell.font = hdr_font
-            cell.fill = hdr_fill
-
-        for row, r in enumerate(ok_rows + err_rows, 2):
-            rank = row - 1 if r["status"] == "OK" else "–"
-            ws.cell(row=row, column=1, value=rank)
-            ws.cell(row=row, column=2, value=r["dealer"])
-            ws.cell(row=row, column=3, value=r["price"])
-            ws.cell(row=row, column=4, value=r["url"])
-            ws.cell(row=row, column=5, value=r["status"])
-            ws.cell(row=row, column=6,
-                    value=datetime.now().strftime("%Y-%m-%d %H:%M"))
-            fill = ok_fill if r["status"] == "OK" else err_fill
-            for col in range(1, 7):
-                ws.cell(row=row, column=col).fill = fill
-            if row == 2 and r["status"] == "OK":
-                ws.cell(row=row, column=3).font = gold_font
-
-        ws.column_dimensions["A"].width = 6
-        ws.column_dimensions["B"].width = 22
-        ws.column_dimensions["C"].width = 18
-        ws.column_dimensions["D"].width = 75
-        ws.column_dimensions["E"].width = 25
-        ws.column_dimensions["F"].width = 18
-
-    filename = f"bullion_prices_{datetime.now().strftime('%Y%m%d_%H%M')}.xlsx"
-    wb.save(filename)
-    print(f"\n  ✓ Excel saved → {filename}")
-
-
-# ── Main ───────────────────────────────────────────────────────────────────────
 async def main():
     print("=" * 65)
-    print("  GoldSilverPrices.com.au — CSS Selector Scraper v3")
-    print("  Runs every 8 hours via Task Scheduler")
+    print("  GoldSilverPrices — Scraper v5")
     print("=" * 65)
     print(f"  Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 
-    # Test DB
-    print("  Testing database connection...")
     try:
         req = urllib.request.Request(
-            f"{SUPABASE_URL}/rest/v1/prices?select=id&limit=1",
+            f"{SUPABASE_URL}/rest/v1/prices_v2?select=id&limit=1",
             headers=DB_HEADERS, method="GET",
         )
         with urllib.request.urlopen(req, timeout=10) as resp:
@@ -644,10 +456,13 @@ async def main():
         print(f"  ✗ DB failed: {e}")
         return
 
+    total_saved = total_deduped = total_invalid = 0
+
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(
             headless=True,
-            args=["--no-sandbox","--disable-blink-features=AutomationControlled"]
+            args=["--no-sandbox", "--disable-blink-features=AutomationControlled",
+                  "--disable-web-security"]
         )
         context = await browser.new_context(
             user_agent=(
@@ -656,55 +471,79 @@ async def main():
                 "Chrome/124.0.0.0 Safari/537.36"
             ),
             viewport={"width": 1280, "height": 900},
-            extra_http_headers={
-                "Accept-Language": "en-AU,en;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            }
+            extra_http_headers={"Accept-Language": "en-AU,en;q=0.9"},
         )
         page = await context.new_page()
 
-        for product in PRODUCTS:
-            pname   = product["name"]
-            min_aud = product["min_aud"]
-            max_aud = product["max_aud"]
+        for dealer in DEALERS:
             print(f"\n{'─'*65}")
-            print(f"  📦 {pname}  (AUD ${min_aud:,}–${max_aud:,})")
+            print(f"  {dealer['name']}")
             print(f"{'─'*65}")
-            for dealer in product["dealers"]:
-                await scrape_dealer(page, dealer, pname, min_aud, max_aud)
+
+            all_links = []
+            for page_config in dealer["pages"]:
+                print(f"  Scanning: {page_config['url']}")
+                links = await get_links(page, page_config, dealer["base_url"])
+                print(f"  → {len(links)} products found")
+                all_links.extend(links)
+
+            seen = set()
+            unique = []
+            for l in all_links:
+                if l["href"] not in seen:
+                    seen.add(l["href"])
+                    unique.append(l)
+
+            print(f"  Total unique: {len(unique)}\n")
+
+            saved_this_run = set()
+            fail_reasons = {}
+
+            for link in unique:
+                cfg = dealer["pages"][0]
+                result, reason = await scrape_product(
+                    page, dealer, link["href"], link["text"],
+                    dealer["price_sels"],
+                    cfg.get("wait", 3000),
+                    dealer.get("use_meta_price", False),
+                )
+
+                if result:
+                    dedup = (
+                        dealer["name"],
+                        result.get("coin_type") or result.get("bar_brand"),
+                        result.get("weight_oz"),
+                        result.get("weight_g"),
+                        result.get("metal"),
+                    )
+                    if dedup in saved_this_run:
+                        total_deduped += 1
+                        continue
+
+                    saved_this_run.add(dedup)
+                    saved = save_to_db(result)
+                    weight = (f"{result['weight_oz']}oz" if result.get("weight_oz")
+                              else f"{result.get('weight_g')}g")
+                    name = result.get("coin_type") or result.get("bar_brand") or "?"
+                    tick = "✓ db" if saved else "✗ db"
+                    print(f"  ✓ {name:20s} {weight:8s} ${result['buy_price']:>10,.2f}  [{tick}]")
+                    total_saved += 1
+                else:
+                    fail_reasons[reason] = fail_reasons.get(reason, 0) + 1
+                    total_invalid += 1
+
+            if fail_reasons:
+                print(f"\n  Failures:")
+                for r, cnt in sorted(fail_reasons.items(), key=lambda x: -x[1])[:5]:
+                    print(f"    {cnt}x {r}")
+
+            print(f"\n  → {len(saved_this_run)} saved for {dealer['name']}")
 
         await browser.close()
 
-    # Summary
     print(f"\n{'='*65}")
-    print("  RESULTS")
+    print(f"  DONE — {total_saved} saved · {total_deduped} deduped · {total_invalid} invalid")
     print(f"{'='*65}")
-    total_ok = total_all = 0
-    for product in PRODUCTS:
-        pname = product["name"]
-        ok    = [r for r in results
-                 if r["product"] == pname and r["status"] == "OK"]
-        total = len(product["dealers"])
-        total_ok  += len(ok)
-        total_all += total
-        sorted_ok = sorted(
-            ok, key=lambda r: float(r["price"].replace("$","").replace(",",""))
-        )
-        print(f"\n  {pname}")
-        for i, r in enumerate(sorted_ok, 1):
-            mark = " ← cheapest" if i == 1 else ""
-            print(f"    {i}. {r['dealer']:28s} {r['price']:>12s}{mark}")
-        err = [r for r in results
-               if r["product"] == pname and r["status"] != "OK"]
-        if err:
-            print(f"    ✗ Missed: {', '.join(r['dealer'] for r in err)}")
-        print(f"    ✓ {len(ok)}/{total} dealers")
-
-    print(f"\n  Total captured: {total_ok}/{total_all}")
-    print(f"{'='*65}")
-    export_excel()
-    print("="*65)
-
 
 if __name__ == "__main__":
     asyncio.run(main())
