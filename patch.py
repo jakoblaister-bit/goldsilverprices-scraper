@@ -1,17 +1,18 @@
-with open("scraper.py", "r", encoding="utf-8") as f:
+with open(".github/workflows/scraper.yml", "r") as f:
     code = f.read()
 
-# Add missing Perth Mint products and fix cast bar URL
-code = code.replace(
-    '{"url": "https://www.perthmint.com/shop/bullion/cast-bars/kangaroo-1oz-cast-gold-bar/", "link_sel": "h1", "wait": 8000, "networkidle": True, "is_direct": True, "name": "1oz Perth Mint Kangaroo Cast Gold Bar"},',
-    '{"url": "https://www.perthmint.com/shop/bullion/cast-bars/kangaroo-1oz-cast-gold-bar/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "1oz Perth Mint Kangaroo Cast Gold Bar"},',
-)
-code = code.replace(
-    '{"url": "https://www.perthmint.com/shop/bullion/cast-bars/kangaroo-cast-gold-bar-100g/", "link_sel": "h1", "wait": 8000, "networkidle": True, "is_direct": True, "name": "100g Perth Mint Kangaroo Cast Gold Bar"},',
-    '{"url": "https://www.perthmint.com/shop/bullion/cast-bars/kangaroo-cast-gold-bar-100g/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "100g Perth Mint Kangaroo Cast Gold Bar"},\n            {"url": "https://www.perthmint.com/shop/bullion/minted-bars/kangaroo-5g-minted-gold-bar/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "5g Perth Mint Kangaroo Minted Gold Bar"},',
-)
+# Increase timeout for v5 which takes longer
+code = code.replace("timeout-minutes: 15", "timeout-minutes: 45")
 
-with open("scraper.py", "w", encoding="utf-8") as f:
+# Remove Excel artifact upload — not used
+code = code.replace("""      - name: Upload Excel as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bullion-prices
+          path: bullion_prices_*.xlsx
+          retention-days: 7""", "")
+
+with open(".github/workflows/scraper.yml", "w") as f:
     f.write(code)
 
 print("Done")
