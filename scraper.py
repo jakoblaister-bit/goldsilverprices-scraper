@@ -13,6 +13,14 @@ import urllib.request
 from datetime import datetime
 from playwright.async_api import async_playwright
 import os
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--debug", help="Run only this dealer in verbose mode")
+parser.add_argument("--nosave", action="store_true", help="Don't save to DB")
+args, _ = parser.parse_known_args()
+DEBUG_DEALER = args.debug.lower() if args.debug else None
+NO_SAVE      = args.nosave
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://cjxkhvkvhgnlnviykoad.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0")
@@ -58,11 +66,18 @@ COIN_TYPES = {
     "koala": "Koala",
     "maple": "Maple Leaf",
     "krugerrand": "Krugerrand",
+    "kruger": "Krugerrand",
     "britannia": "Britannia",
+    "british": "Britannia",
     "philharmonic": "Philharmonic",
+    "philharmoniker": "Philharmonic",
+    "austrian": "Philharmonic",
     "american eagle": "American Eagle",
     "buffalo": "Buffalo",
     "lunar": "Lunar",
+    "horse": "Lunar",
+    "dragon": "Lunar",
+    "snake": "Lunar",
     "emu": "Emu",
     "swan coin": "Swan",
     "panda": "Panda",
@@ -266,20 +281,26 @@ DEALERS = [
     {
         "name": "KJC Bullion",
         "pages": [
-            {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/australian-bullion-gold-coins/41/1",
-             "link_sel": "a[href*='/PD/']",
-             "wait": 6000, "networkidle": True},
-            {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/australian-bullion-silver-coins/42/1",
-             "link_sel": "a[href*='/PD/']",
-             "wait": 6000, "networkidle": True},
-            {"url": "https://www.kjc-gold-silver-bullion.com.au/CT/perth-mint-gold-minted-bars/272/1",
-             "link_sel": "a[href*='/PD/']",
-             "wait": 6000, "networkidle": True},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kangaroo-gold-bullion-coin/3003878", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Australian Kangaroo Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/12-oz-2026-australian-kangaroo-gold-bullion-coin/3003879", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1/2oz 2026 Australian Kangaroo Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/14-oz-2026-australian-kangaroo-gold-bullion-coin/3003880", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1/4oz 2026 Australian Kangaroo Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-10-oz-2026-australian-kangaroo-gold-bullion-coin/3003881", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1/10oz 2026 Australian Kangaroo Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kangaroo-silver-bullion-coin/3003876", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Australian Kangaroo Silver Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kookaburra-silver-bullion-coin/3003877", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Australian Kookaburra Silver Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-canadian-maple-leaf-gold-bullion-coin/3003907", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Canadian Maple Leaf Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-canadian-maple-leaf-silver-bullion-coin/3003908", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Canadian Maple Leaf Silver Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-british-britannia-gold-bullion-coin/3003905", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 British Britannia Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-south-african-krugerrand-gold-bullion-coin/3003903", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 South African Krugerrand Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-austrian-philharmonic-gold-bullion-coin/3003906", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Austrian Philharmonic Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-year-of-the-horse-gold-bullion-coin/3003807", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Australian Lunar Horse Gold Bullion Coin"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-perth-mint-gold-bar/3003900", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz Perth Mint Gold Minted Bar"},
+            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1g-perth-mint-gold-minted-bar/3003901", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1g Perth Mint Gold Minted Bar"},
         ],
-        "price_sels": ["span[itemprop='price']", ".product-price",
-                       ".price", "[class*='price']"],
+        "price_sels": [".product-price .price", "span[itemprop='price']",
+                       ".price", "[class*='price']", "strong"],
         "base_url": "https://www.kjc-gold-silver-bullion.com.au",
         "networkidle": True,
+        "use_sitemap": True,
     },
     {
         "name": "Perth Mint",
@@ -308,6 +329,14 @@ DEALERS = [
 
 async def get_links(page, page_config, base_url):
     try:
+        # Direct product URL mode
+        if page_config.get("is_direct"):
+            return [{"href": page_config["url"], "text": ""}]
+
+        # Sitemap mode
+        if page_config.get("is_sitemap"):
+            return []
+
         await page.goto(page_config["url"], timeout=60000, wait_until="domcontentloaded")
         if page_config.get("networkidle"):
             try:
@@ -338,12 +367,28 @@ async def get_links(page, page_config, base_url):
                 continue
             seen.add(href)
             results.append({"href": href, "text": link.get("text", "")})
+        # If no links found and sitemap mode, try fetching sitemap
+        if not results and page_config.get("use_sitemap", False):
+            try:
+                sitemap_resp = await page.goto("https://www.kjc-gold-silver-bullion.com.au/sitemap.xml", timeout=30000)
+                content = await page.content()
+                import re as re2
+                pd_urls = re2.findall(r'https://www\.kjc-gold-silver-bullion\.com\.au/PD/[^<]+', content)
+                for url in pd_urls[:50]:  # limit to 50
+                    url = url.strip()
+                    if url not in seen:
+                        seen.add(url)
+                        results.append({"href": url, "text": ""})
+                print(f"      [sitemap] Found {len(results)} PD URLs")
+            except Exception as se:
+                print(f"      [sitemap error] {str(se)[:60]}")
+
         return results
     except Exception as e:
         print(f"      [LINK ERROR] {str(e)[:60]}")
         return []
 
-async def scrape_product(page, dealer, url, text, price_sels, wait=3000, use_meta=False):
+async def scrape_product(page, dealer, url, text, price_sels, wait=3000, use_meta=False, page_config=None):
     try:
         await page.goto(url, timeout=60000, wait_until="domcontentloaded")
         if dealer.get("networkidle"):
@@ -353,15 +398,23 @@ async def scrape_product(page, dealer, url, text, price_sels, wait=3000, use_met
                 pass
         await page.wait_for_timeout(wait)
 
-        # Get title
-        title = ""
-        try:
-            title = await page.inner_text("h1")
-            title = title.strip()
-        except:
-            pass
+        # Get title — use hardcoded name if available (for JS-rendered sites)
+        title = page_config.get("name", "") if hasattr(page_config, "get") else ""
         if not title:
+            try:
+                title = await page.inner_text("h1")
+                title = title.strip()
+            except:
+                pass
+        # Fallback: derive title from URL (handles JS-rendered sites)
+        if not title or len(title) < 5:
             title = text
+        if not title or len(title) < 5:
+            # Parse from URL e.g. /PD/1-oz-2026-british-britannia-gold-bullion-coin/
+            import re as _re
+            url_part = url.rstrip("/").split("/")[-2] if "/PD/" in url else ""
+            if url_part:
+                title = url_part.replace("-", " ").title()
 
         parsed = parse_name(title)
         if not parsed:
@@ -477,7 +530,14 @@ async def main():
         )
         page = await context.new_page()
 
-        for dealer in DEALERS:
+        dealers_to_run = DEALERS
+        if DEBUG_DEALER:
+            dealers_to_run = [d for d in DEALERS if DEBUG_DEALER in d['name'].lower()]
+            if not dealers_to_run:
+                print(f"  No dealer matching '{DEBUG_DEALER}'")
+                return
+            print(f"  DEBUG MODE: {dealers_to_run[0]['name']}\n")
+        for dealer in dealers_to_run:
             print(f"\n{'─'*65}")
             print(f"  {dealer['name']}")
             print(f"{'─'*65}")
@@ -502,12 +562,17 @@ async def main():
             fail_reasons = {}
 
             for link in unique:
-                cfg = dealer["pages"][0]
+                # Match this link to its page config for correct name
+                cfg = next(
+                    (p for p in dealer["pages"] if p["url"] == link["href"]),
+                    dealer["pages"][0]
+                )
                 result, reason = await scrape_product(
                     page, dealer, link["href"], link["text"],
                     dealer["price_sels"],
                     cfg.get("wait", 3000),
                     dealer.get("use_meta_price", False),
+                    page_config=cfg,
                 )
 
                 if result:
@@ -523,7 +588,7 @@ async def main():
                         continue
 
                     saved_this_run.add(dedup)
-                    saved = save_to_db(result)
+                    saved = save_to_db(result) if not NO_SAVE else True
                     weight = (f"{result['weight_oz']}oz" if result.get("weight_oz")
                               else f"{result.get('weight_g')}g")
                     name = result.get("coin_type") or result.get("bar_brand") or "?"
