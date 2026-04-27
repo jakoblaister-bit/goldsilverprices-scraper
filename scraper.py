@@ -328,9 +328,9 @@ DEALERS = [
             {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kookaburra-silver-bullion-coin/3003877", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Australian Kookaburra Silver Bullion Coin"},
             {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-canadian-maple-leaf-gold-bullion-coin/3003907", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Canadian Maple Leaf Gold Bullion Coin"},
             {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-canadian-maple-leaf-silver-bullion-coin/3003908", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Canadian Maple Leaf Silver Bullion Coin"},
-            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-british-britannia-gold-bullion-coin/3003905", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 British Britannia Gold Bullion Coin"},
-            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-south-african-krugerrand-gold-bullion-coin/3003903", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 South African Krugerrand Gold Bullion Coin"},
-            {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-austrian-philharmonic-gold-bullion-coin/3003906", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Austrian Philharmonic Gold Bullion Coin"},
+            
+            
+            
             {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-year-of-the-horse-gold-bullion-coin/3003807", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz 2026 Australian Lunar Horse Gold Bullion Coin"},
             {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-perth-mint-gold-bar/3003900", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1oz Perth Mint Gold Minted Bar"},
             {"url": "https://www.kjc-gold-silver-bullion.com.au/PD/1g-perth-mint-gold-minted-bar/3003901", "link_sel": "h1", "wait": 5000, "is_direct": True, "name": "1g Perth Mint Gold Minted Bar"},
