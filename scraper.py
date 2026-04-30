@@ -11,7 +11,7 @@ import json
 import re
 import urllib.request
 import urllib.parse
-from datetime import datetime
+from datetime import datetime, timezone
 from playwright.async_api import async_playwright
 import os
 import argparse
@@ -225,7 +225,33 @@ def delete_existing(row):
     except Exception as e:
         pass  # Non-critical — insert will still work
 
+SPOT_EST = {"gold": 6500, "silver": 100, "platinum": 2500}
+MAX_PREMIUM = 4.0   # reject if price/oz > spot * 4x
+MIN_PREMIUM = 0.75  # reject if price/oz < spot * 0.75x
+
+def is_price_sane(row):
+    """Return False if buy_price or sell_price is wildly out of range vs spot estimate."""
+    metal = row.get("metal", "")
+    spot = SPOT_EST.get(metal)
+    if not spot:
+        return True  # unknown metal, let it through
+    weight_oz = row.get("weight_oz")
+    if not weight_oz or weight_oz <= 0:
+        return True  # no weight to validate against
+    for price_field in ("buy_price", "sell_price"):
+        price = row.get(price_field)
+        if price is None:
+            continue
+        ratio = price / (spot * weight_oz)
+        if ratio > MAX_PREMIUM or ratio < MIN_PREMIUM:
+            print(f"  ✗ REJECTED insane price: {row.get('dealer')} {metal} {weight_oz}oz "
+                  f"{price_field}=${price:,.0f} ({ratio:.1f}x spot)")
+            return False
+    return True
+
 def save_to_db(row):
+    if not is_price_sane(row):
+        return False
     try:
         # Delete old price first — prevents duplicates
         delete_existing(row)
@@ -248,13 +274,26 @@ DEALERS = [
         "pages": [
             {"url": "https://ainsliebullion.com.au/Buy/Keyword/Gold-Coins/ID/13",
              "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
-            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver-Coins/ID/3",
-             "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
+            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver-Coins/ID/3", "link_sel": "a[href*='/Buy/View/Product/']", "wait": 6000},
+            {"url": "https://ainsliebullion.com.au/Buy/Keyword/Silver-Bars/ID/16", "link_sel": "a[href*='/Buy/View/Product/']", "wait": 6000},
             {"url": "https://ainsliebullion.com.au/Buy/Keyword/Gold-Bars/ID/15",
              "link_sel": "a[href*='/Buy/View/Product/']", "wait": 4000},
         ],
-        "price_sels": [".price", ".product-price", "span[class*='price']", ".buy-price"],
+        "price_sels": ["span.price-number", ".price-number", ".price", ".product-price"],
         "base_url": "https://ainsliebullion.com.au",
+    },
+    {
+        "name": "Guardian Gold",
+        "pages": [
+            {"url": "https://guardian-gold.com.au/product-category/gold/buy-gold-cast-bars/", "link_sel": "a[href*='/product/']", "wait": 4000},
+            {"url": "https://guardian-gold.com.au/product-category/gold/buy-gold-minted-bars/", "link_sel": "a[href*='/product/']", "wait": 4000},
+            {"url": "https://guardian-gold.com.au/product-category/gold/gold-coins/", "link_sel": "a[href*='/product/']", "wait": 4000},
+            {"url": "https://guardian-gold.com.au/product-category/silver/silver-buy-silver-bars/", "link_sel": "a[href*='/product/']", "wait": 4000},
+            {"url": "https://guardian-gold.com.au/product-category/silver/buy-silver-coins/", "link_sel": "a[href*='/product/']", "wait": 4000},
+            {"url": "https://guardian-gold.com.au/product-category/platinum/", "link_sel": "a[href*='/product/']", "wait": 4000},
+        ],
+        "price_sels": ["span.price", ".price bdi", ".woocommerce-Price-amount bdi"],
+        "base_url": "https://guardian-gold.com.au",
     },
     {
         "name": "Gold Stackers",
@@ -354,8 +393,8 @@ DEALERS = [
             {"url": "https://www.perthmint.com/shop/bullion/minted-bars/kangaroo-10g-minted-gold-bar/", "link_sel": "h1", "wait": 8000, "networkidle": True, "is_direct": True, "name": "10g Perth Mint Kangaroo Minted Gold Bar"},
             {"url": "https://www.perthmint.com/shop/bullion/minted-bars/kangaroo-5g-minted-gold-bar/", "link_sel": "h1", "wait": 8000, "networkidle": True, "is_direct": True, "name": "5g Perth Mint Kangaroo Minted Gold Bar"},
             {"url": "https://www.perthmint.com/shop/bullion/minted-bars/kangaroo-1g-minted-gold-bar/", "link_sel": "h1", "wait": 8000, "networkidle": True, "is_direct": True, "name": "1g Perth Mint Kangaroo Minted Gold Bar"},
-            {"url": "https://www.perthmint.com/shop/bullion/cast-bars/kangaroo-1oz-cast-gold-bar/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "1oz Perth Mint Kangaroo Cast Gold Bar"},
-            {"url": "https://www.perthmint.com/shop/bullion/cast-bars/kangaroo-cast-gold-bar-100g/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "100g Perth Mint Kangaroo Cast Gold Bar"},
+            {"url": "https://www.perthmint.com/shop/bullion/cast-bars/perth-mint-1oz-gold-cast-bar/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "1oz Perth Mint Kangaroo Cast Gold Bar"},
+            {"url": "https://www.perthmint.com/shop/bullion/cast-bars/perth-mint-100g-gold-cast-bar/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "100g Perth Mint Kangaroo Cast Gold Bar"},
             {"url": "https://www.perthmint.com/shop/bullion/minted-bars/kangaroo-5g-minted-gold-bar/", "link_sel": "h1", "wait": 12000, "networkidle": True, "is_direct": True, "name": "5g Perth Mint Kangaroo Minted Gold Bar"},
         ],
         "price_sels": [
@@ -378,7 +417,27 @@ async def get_links(page, page_config, base_url):
 
         # Sitemap mode
         if page_config.get("is_sitemap"):
-            return []
+            try:
+                from xml.etree import ElementTree as ET
+                req = urllib.request.Request(page_config["url"], headers={"User-Agent":"Mozilla/5.0"})
+                with urllib.request.urlopen(req, timeout=15) as r:
+                    xml = r.read()
+                root = ET.fromstring(xml)
+                ns = {"sm":"http://www.sitemaps.org/schemas/sitemap/0.9"}
+                urls = [loc.text for loc in root.findall(".//sm:loc", ns) if loc.text]
+                # Filter to product pages only, exclude category/tag pages
+                BULLION_KEYWORDS = ["gold","silver","platinum","bar","coin","bullion","oz","gram","kilo","pamp","heraeus","abc","baird","valcambi","krugerrand","kangaroo","kookaburra","lunar","britannia","maple","philharmonic","emu"]
+                product_urls = [
+                    u for u in urls
+                    if "/product/" in u
+                    and "/product-category/" not in u
+                    and any(k in u.lower() for k in BULLION_KEYWORDS)
+                ]
+                print(f"    Sitemap: {len(product_urls)} product URLs found")
+                return [{"href": u, "text": ""} for u in product_urls]
+            except Exception as e:
+                print(f"    Sitemap error: {e}")
+                return []
 
         await page.goto(page_config["url"], timeout=60000, wait_until="domcontentloaded")
         if page_config.get("networkidle"):
@@ -434,6 +493,10 @@ async def get_links(page, page_config, base_url):
 async def scrape_product(page, dealer, url, text, price_sels, wait=3000, use_meta=False, page_config=None):
     try:
         await page.goto(url, timeout=60000, wait_until="domcontentloaded")
+        # Check for unavailable products
+        page_text = await page.inner_text("body")
+        if "Unavailable" in page_text and "Add to Cart" not in page_text:
+            return None, "product unavailable"
         if dealer.get("networkidle"):
             try:
                 await page.wait_for_load_state("networkidle", timeout=15000)
@@ -530,10 +593,452 @@ async def scrape_product(page, dealer, url, text, price_sels, wait=3000, use_met
             return None, f"no valid price found for {title[:40]}"
 
         return {**parsed, "dealer": dealer["name"], "buy_price": price,
-                "url": url, "status": "OK", "in_stock": True}, None
+                "url": url, "status": "OK", "available": True, "last_seen": datetime.now(timezone.utc).isoformat(), "in_stock": True}, None
 
     except Exception as e:
         return None, f"error: {str(e)[:60]}"
+
+
+
+async def scrape_jaggards_sell(page):
+    """Scrape Jaggards live buyback prices"""
+    results = []
+    try:
+        await page.goto("https://www.jaggards.com.au/sell-to-us/",
+                       wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(5000)
+
+        rows = await page.query_selector_all("table tr")
+        current_metal = "gold"
+        for row in rows:
+            cells = await row.query_selector_all("td")
+            if len(cells) < 2:
+                # Check for section header
+                header = await row.query_selector("th, td")
+                if header:
+                    txt = (await header.inner_text()).lower()
+                    if "silver" in txt:
+                        current_metal = "silver"
+                    elif "gold" in txt:
+                        current_metal = "gold"
+                continue
+
+            name = (await cells[0].inner_text()).strip()
+            price_str = (await cells[-1].inner_text()).strip().replace("$","").replace(",","")
+
+            try:
+                price = float(price_str)
+            except:
+                continue
+
+            if price <= 0:
+                continue
+
+            # Parse weight from name e.g. "1oz Gold .9999", "5g Gold .9999"
+            wm = re.search(r"(1/20|1/10|1/4|1/2|\d+(?:\.\d+)?)(oz|g|kg)", name.lower())
+            if not wm:
+                continue
+
+            wstr  = wm.group(1)
+            wunit = wm.group(2)
+
+            frac_map = {"1/20":0.05,"1/10":0.1,"1/4":0.25,"1/2":0.5}
+            if wstr in frac_map:
+                wval = frac_map[wstr]
+            else:
+                wval = float(wstr)
+
+            if wunit == "oz":
+                weight_oz = wval
+            elif wunit == "kg":
+                weight_oz = wval * 32.1507
+            else:
+                weight_oz = wval / 31.1035
+
+            results.append({
+                "dealer":    "Jaggards",
+                "metal":     current_metal,
+                "sell_price": price,
+                "weight_oz": round(weight_oz, 4),
+                "category":  "bar",
+                "status":    "OK",
+                "scraped_at": datetime.now(timezone.utc).isoformat(),
+            })
+            print(f"  ✓ Jaggards buyback {current_metal} {weight_oz:.4f}oz @ A${price:.2f}")
+
+    except Exception as e:
+        print(f"  ✗ Jaggards sell error: {e}")
+    return results
+
+
+async def scrape_bullion_now_sell(page):
+    """Bullion Now — prices in nfusionsolutions iframe"""
+    results = []
+    try:
+        await page.goto("https://bullionnow.com.au/sell-my-bullion/",
+                       wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(8000)
+        frame = next((f for f in page.frames if "nfusionsolutions" in f.url and "table" in f.url), None)
+        if not frame:
+            print("  ⚠️  Bullion Now iframe not found")
+            return results
+        data = await frame.evaluate("""() => {
+            const rows = document.querySelectorAll('tr.symbol-block');
+            return Array.from(rows).map(r => ({
+                metal: r.querySelector('th.symbol') ? r.querySelector('th.symbol').innerText : '',
+                price: r.querySelector('.value') ? r.querySelector('.value').innerText : ''
+            }));
+        }""")
+        for item in data:
+            metal_txt = item.get("metal","").strip().lower()
+            price_str = item.get("price","").replace("A","").replace("$","").replace(",","").strip()
+            if metal_txt not in ["gold","silver","platinum"]: continue
+            try:
+                price = float(price_str)
+                if price > 0:
+                    results.append({"dealer":"Bullion Now","metal":metal_txt,
+                        "sell_price":price,"weight_oz":1.0,"category":"bar",
+                        "status":"OK","scraped_at":datetime.now(timezone.utc).isoformat()})
+                    print(f"  ✓ Bullion Now buyback {metal_txt} 1oz @ A${price:.2f}")
+            except: pass
+    except Exception as e:
+        print(f"  ✗ Bullion Now sell error: {e}")
+    return results
+
+
+async def scrape_melbourne_gold_sell(page):
+    """Melbourne Gold Company — bullion rates from li elements"""
+    results = []
+    try:
+        await page.goto("https://www.melbournegoldcompany.com.au/gold-buyers-melbourne.html",
+                       wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(5000)
+        items = await page.query_selector_all("li")
+        for item in items:
+            txt = (await item.inner_text()).strip()
+            lines = [l.strip() for l in txt.split("\n") if l.strip()]
+            if len(lines) < 2:
+                continue
+            name = lines[0]
+            # Only bullion bars/coins — skip purity/jewellery rows
+            if not re.search(r"(oz|kg|gram).*(gold|silver)", name.lower()) and                not re.search(r"(gold|silver).*(oz|g|kg)", name.lower()):
+                continue
+            if any(x in name.lower() for x in ["purity","per gram","round coin","granule"]):
+                continue
+            price_str = lines[1].replace("$","").replace(",","").strip()
+            try:
+                price = float(price_str)
+            except:
+                continue
+            if price <= 0:
+                continue
+            metal = "silver" if "silver" in name.lower() else "gold"
+            weight_oz = None
+            # Handle "1oz", "10oz", "1kg" style
+            wm = re.search(r"(\d+(?:\.\d+)?)\s*(oz|g\b|kg)", name.lower())
+            if wm:
+                wval  = float(wm.group(1))
+                wunit = wm.group(2).strip()
+                if wunit == "oz":   weight_oz = wval
+                elif wunit == "g":  weight_oz = wval / 31.1035
+                elif wunit == "kg": weight_oz = wval * 32.1507
+            if not weight_oz:
+                continue
+            results.append({
+                "dealer":"Melbourne Gold Company","metal":metal,
+                "sell_price":price,"weight_oz":round(weight_oz,4),"category":"bar",
+                "status":"OK","scraped_at":datetime.now(timezone.utc).isoformat(),
+            })
+            print(f"  ✓ Melbourne Gold buyback {metal} {weight_oz:.4f}oz @ A${price:.2f}")
+    except Exception as e:
+        print(f"  ✗ Melbourne Gold sell error: {e}")
+    return results
+
+
+async def scrape_imperial_sell(page):
+    """Imperial Bullion Brisbane — bullion bars and coins, gold + silver"""
+    results = []
+    FRAC = {"1/20oz":0.05,"1/10oz":0.1,"1/4oz":0.25,"1/2oz":0.5}
+    try:
+        await page.goto("https://imperialbullion.com.au/sell-prices/",
+                       wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(6000)
+
+        # Track current metal via section headings
+        current_metal = "gold"
+        elements = await page.query_selector_all("h3, li")
+        for el in elements:
+            tag = await el.evaluate("e => e.tagName.toLowerCase()")
+
+            if tag == "h3":
+                heading = (await el.inner_text()).strip().lower()
+                if "silver" in heading:
+                    current_metal = "silver"
+                elif "gold" in heading:
+                    current_metal = "gold"
+                continue
+
+            # li element
+            title_el = await el.query_selector("span.title")
+            meta_el  = await el.query_selector("span.meta")
+            if not title_el or not meta_el:
+                continue
+
+            name = (await title_el.inner_text()).strip()
+            if any(x in name.lower() for x in ["ct gold","sovereign","$200","half sov"]):
+                continue
+
+            img = await meta_el.query_selector("img")
+            if img:
+                continue
+
+            price_str = (await meta_el.inner_text()).strip().replace("$","").replace(",","")
+            try:
+                price = float(price_str)
+            except:
+                continue
+            if price <= 0:
+                continue
+
+            name_l = name.lower().strip()
+            weight_oz = None
+            for frac, oz in FRAC.items():
+                if frac in name_l.replace(" ",""):
+                    weight_oz = oz
+                    break
+            if not weight_oz:
+                wm = re.search(r"(\d+(?:\.\d+)?)\s*(oz|g\b|kg|kilo)", name_l)
+                if wm:
+                    wval  = float(wm.group(1))
+                    wunit = wm.group(2)
+                    if wunit == "oz":            weight_oz = wval
+                    elif wunit == "g":           weight_oz = wval / 31.1035
+                    elif wunit in ["kg","kilo"]: weight_oz = wval * 32.1507
+            if not weight_oz:
+                continue
+
+            # Sanity check vs spot
+            spot_est = 6500 if current_metal == "gold" else 100
+            if price > spot_est * weight_oz * 1.5 or price < spot_est * weight_oz * 0.5:
+                continue
+
+            cat = "coin" if "coin" in name_l or "lunar" in name_l else "bar"
+            results.append({
+                "dealer":"Imperial Bullion","metal":current_metal,
+                "sell_price":price,"weight_oz":round(weight_oz,4),
+                "category":cat,"status":"OK",
+                "scraped_at":datetime.now(timezone.utc).isoformat(),
+            })
+            print(f"  ✓ Imperial buyback {current_metal} {weight_oz:.4f}oz [{name[:25]}] @ A${price:.2f}")
+
+    except Exception as e:
+        print(f"  ✗ Imperial sell error: {e}")
+    return results
+
+
+async def scrape_perth_mint_sell(page):
+    """Scrape Perth Mint buyback prices - clicks accordions to reveal tables"""
+    results = []
+    WEIGHT_MAP = {
+        "1/20 ounce":0.05,"1/10 ounce":0.1,"1/4 ounce":0.25,"1/2 ounce":0.5,
+        "1 ounce":1.0,"2 ounce":2.0,"10 ounce":10.0,"1 kilo":32.1507,
+        "1 gram":0.0322,"5 gram":0.1608,"10 gram":0.3215,"20 gram":0.6430,
+        "50 gram":1.6076,"100 gram":3.2151,"1 kilogram":32.1507,
+    }
+    METAL_SECTIONS = [
+        ("gold coins",   "gold"),
+        ("gold cast",    "gold"),
+        ("gold minted",  "gold"),
+        ("silver coins", "silver"),
+        ("silver cast",  "silver"),
+        ("silver minted","silver"),
+    ]
+    try:
+        await page.goto("https://www.perthmint.com/invest/information-for-investors/metal-prices/",
+                       wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(4000)
+
+        # Click all accordion sections open — scroll into view first
+        accordions = await page.query_selector_all("a.accordion-title")
+        for acc in accordions:
+            label = (await acc.inner_text()).strip().lower()
+            if "jewellery" in label or "hallmark" in label or "other" in label:
+                continue
+            try:
+                await acc.scroll_into_view_if_needed()
+                await page.wait_for_timeout(300)
+                expanded = await acc.get_attribute("aria-expanded")
+                if expanded != "true":
+                    await acc.click()
+                    await page.wait_for_timeout(1000)
+            except:
+                pass
+
+        await page.wait_for_timeout(2000)
+
+        # Now scrape all open accordion tables
+        sections = await page.query_selector_all("a.accordion-title")
+        for acc in sections:
+            label = (await acc.inner_text()).strip().lower()
+            if "jewellery" in label or "hallmark" in label or "other" in label:
+                continue
+
+            # Determine metal
+            metal = "gold" if "gold" in label else "silver" if "silver" in label else None
+            if not metal:
+                continue
+
+            # Get the associated accordion content
+            ctrl_id = await acc.get_attribute("aria-controls")
+            if not ctrl_id:
+                continue
+            content = await page.query_selector(f"[id='{ctrl_id}']")
+            if not content:
+                continue
+
+            rows = await content.query_selector_all("div[role='row']")
+            for row in rows:
+                cells = await row.query_selector_all("span[role='cell']")
+                if len(cells) < 3:
+                    continue
+                weight_str = (await cells[0].inner_text()).strip().lower()
+                buy_str    = (await cells[2].inner_text()).strip().replace("$","").replace(",","").strip()
+
+                weight_oz = WEIGHT_MAP.get(weight_str)
+                if not weight_oz:
+                    # try gram patterns
+                    wm = re.search(r"(\d+)\s*gram", weight_str)
+                    if wm:
+                        weight_oz = int(wm.group(1)) / 31.1035
+
+                if not weight_oz:
+                    continue
+                try:
+                    price = float(buy_str)
+                    if price > 0:
+                        results.append({
+                            "dealer":"Perth Mint","metal":metal,
+                            "sell_price":price,"weight_oz":round(weight_oz,4),
+                            "category":"coin" if "coin" in label else "bar",
+                        })
+                        print(f"  ✓ Perth Mint buys {metal} {weight_oz:.4f}oz @ A${price:.2f}")
+                except:
+                    pass
+    except Exception as e:
+        print(f"  ✗ Perth Mint sell error: {e}")
+    return results
+
+async def scrape_abc_sell(page):
+    """Scrape ABC Bullion buyback prices — 3-column table: name, sell, buyback"""
+    results = []
+    FRAC = {"1/20":0.05,"1/10":0.1,"1/4":0.25,"1/2":0.5}
+    try:
+        for metal, url in [
+            ("gold",   "https://www.abcbullion.com.au/products-pricing/gold"),
+            ("silver", "https://www.abcbullion.com.au/products-pricing/silver"),
+        ]:
+            await page.goto(url, wait_until="domcontentloaded", timeout=30000)
+            await page.wait_for_timeout(6000)
+            rows = await page.query_selector_all("table tr")
+            for row in rows:
+                cells = await row.query_selector_all("td")
+                if len(cells) < 3:
+                    continue
+                name        = (await cells[0].inner_text()).strip()
+                buyback_str = (await cells[2].inner_text()).strip().replace("$","").replace(",","")
+                try:
+                    sell_price = float(buyback_str)
+                except:
+                    continue
+                if sell_price < 50:
+                    continue
+                name_l = name.lower()
+                if any(x in name_l for x in ["pool","tael","luong","good delivery","400oz","kilo bar","5kg","10kg"]):
+                    continue
+                weight_oz = None
+                for frac, oz in FRAC.items():
+                    if frac+"oz" in name_l or frac+" oz" in name_l:
+                        weight_oz = oz
+                        break
+                if not weight_oz:
+                    wm = re.search(r"(\d+(?:\.\d+)?)\s*(oz|g|kg)\b", name_l)
+                    if wm:
+                        wval  = float(wm.group(1))
+                        wunit = wm.group(2)
+                        if wunit == "oz":   weight_oz = wval
+                        elif wunit == "g":  weight_oz = wval / 31.1035
+                        elif wunit == "kg": weight_oz = wval * 32.1507
+                if not weight_oz:
+                    continue
+                spot_est = 6500 if metal == "gold" else 100
+                expected = spot_est * weight_oz
+                if sell_price > expected * 1.5 or sell_price < expected * 0.5:
+                    continue
+                results.append({
+                    "dealer":"ABC Bullion","metal":metal,
+                    "sell_price":sell_price,"weight_oz":round(weight_oz,4),
+                    "category":"coin" if "coin" in name_l else "bar",
+                })
+                print(f"  ✓ ABC buyback {metal} {weight_oz:.4f}oz [{name[:30]}] @ A${sell_price:.2f}")
+    except Exception as e:
+        print(f"  ✗ ABC sell error: {e}")
+    return results
+
+
+async def scrape_guardian_sell(page):
+    """Scrape Guardian Gold live buyback rates"""
+    results = []
+    try:
+        await page.goto("https://guardian-gold.com.au/sell-bullion/",
+                       wait_until="domcontentloaded", timeout=30000)
+        await page.wait_for_timeout(5000)
+        
+        rows = await page.query_selector_all("table tr")
+        current_metal = None
+        for row in rows:
+            cells = await row.query_selector_all("td")
+            if not cells:
+                continue
+            texts = [(await c.inner_text()).strip() for c in cells]
+            
+            if len(texts) >= 1 and texts[0] in ["Gold", "Silver", "Platinum"]:
+                current_metal = texts[0].lower()
+                continue
+            
+            if current_metal and len(texts) >= 2:
+                weight_str = texts[0].strip()
+                price_str  = texts[-1].replace("$","").replace(",","").strip()
+                
+                # Parse weight
+                import re as re2
+                wm = re2.search(r"(\d+(?:\.\d+)?)(g|oz|KG|kg)", weight_str)
+                if not wm:
+                    continue
+                wval = float(wm.group(1))
+                wunit = wm.group(2).lower()
+                if wunit == "oz":
+                    weight_oz = wval
+                elif wunit == "kg":
+                    weight_oz = wval * 32.1507
+                else:
+                    weight_oz = wval / 31.1035
+                
+                try:
+                    sell_price = float(price_str)
+                    if sell_price > 0:
+                        results.append({
+                            "dealer": "Guardian Gold",
+                            "metal": current_metal,
+                            "sell_price": sell_price,
+                            "weight_oz": round(weight_oz, 4),
+                            "category": "bar",
+                        })
+                        print(f"  ✓ Guardian buyback {current_metal} {weight_oz:.2f}oz @ A${sell_price:.2f}")
+                except:
+                    pass
+    except Exception as e:
+        print(f"  ✗ Guardian sell error: {e}")
+    return results
 
 async def main():
     print("=" * 65)
@@ -604,20 +1109,39 @@ async def main():
             saved_this_run = set()
             fail_reasons = {}
 
-            for link in unique:
-                # Match this link to its page config for correct name
+            # Parallel scraping — 5 tabs at once
+            # Reduce batch for slow dealers
+            BATCH = 3 if "perth" not in dealer["name"].lower() else 1
+            extra_pages = [await context.new_page() for _ in range(BATCH - 1)]
+            pool = [page] + extra_pages
+
+            async def scrape_one(pg, link):
                 cfg = next(
                     (p for p in dealer["pages"] if p["url"] == link["href"]),
                     dealer["pages"][0]
                 )
-                result, reason = await scrape_product(
-                    page, dealer, link["href"], link["text"],
+                return await scrape_product(
+                    pg, dealer, link["href"], link["text"],
                     dealer["price_sels"],
                     cfg.get("wait", 3000),
                     dealer.get("use_meta_price", False),
                     page_config=cfg,
                 )
 
+            all_batch = []
+            for i in range(0, len(unique), BATCH):
+                batch = unique[i:i+BATCH]
+                tasks = [scrape_one(pool[j], lnk) for j, lnk in enumerate(batch)]
+                out = await asyncio.gather(*tasks, return_exceptions=True)
+                all_batch.extend(out)
+
+            for _res in all_batch:
+                if isinstance(_res, Exception):
+                    continue
+                if isinstance(_res, tuple):
+                    result, reason = _res
+                else:
+                    result = _res
                 if result:
                     dedup = (
                         dealer["name"],
@@ -641,6 +1165,18 @@ async def main():
                 else:
                     fail_reasons[reason] = fail_reasons.get(reason, 0) + 1
                     total_invalid += 1
+                    if reason == "product unavailable":
+                        try:
+                            patch_data = json.dumps({"available": False}).encode()
+                            req2 = urllib.request.Request(
+                                f"{SUPABASE_URL}/rest/v1/prices_v2?dealer=eq.{urllib.parse.quote(dealer['name'])}&status=eq.OK",
+                                data=patch_data,
+                                headers={**DB_HEADERS, "Content-Type": "application/json"},
+                                method="PATCH"
+                            )
+                            urllib.request.urlopen(req2, timeout=5)
+                        except:
+                            pass
 
             if fail_reasons:
                 print(f"\n  Failures:")
@@ -648,6 +1184,53 @@ async def main():
                     print(f"    {cnt}x {r}")
 
             print(f"\n  → {len(saved_this_run)} saved for {dealer['name']}")
+
+        # ── Sell price scraping ──────────────────────────────────────────────────
+        print(f"\n{'='*65}")
+        print("  SELL PRICES")
+        print(f"{'='*65}")
+        sell_results = []
+        for fn, name in [
+            (scrape_perth_mint_sell, "Perth Mint"),
+            (scrape_abc_sell, "ABC Bullion"),
+            (scrape_guardian_sell, "Guardian Gold"),
+            (scrape_jaggards_sell, "Jaggards"),
+            (scrape_bullion_now_sell, "Bullion Now"),
+            (scrape_melbourne_gold_sell, "Melbourne Gold Company"),
+            (scrape_imperial_sell, "Imperial Bullion"),
+        ]:
+            print(f"\n  {name}")
+            try:
+                res = await fn(page)
+                sell_results.extend(res)
+            except Exception as e:
+                print(f"  ✗ {name} sell failed: {e}")
+
+        if sell_results:
+            print(f"\n  Saving {len(sell_results)} sell prices...")
+            saved_sell = 0
+            for row in sell_results:
+                try:
+                    # Match existing row and update sell_price only
+                    dealer   = row["dealer"]
+                    metal    = row["metal"]
+                    weight   = row.get("weight_oz")
+                    sell_p   = row["sell_price"]
+                    import json as json2
+                    # Update existing rows matching dealer+metal+weight
+                    url = (f"{SUPABASE_URL}/rest/v1/prices_v2"
+                           f"?dealer=eq.{urllib.parse.quote(dealer)}"
+                           f"&metal=eq.{metal}"
+                           + (f"&weight_oz=eq.{weight}" if weight else ""))
+                    patch_data = json2.dumps({"sell_price": sell_p}).encode()
+                    req = urllib.request.Request(url, data=patch_data,
+                        headers={**DB_HEADERS,"Content-Type":"application/json"},
+                        method="PATCH")
+                    urllib.request.urlopen(req, timeout=10)
+                    saved_sell += 1
+                except Exception as e:
+                    pass
+            print(f"  ✓ {saved_sell} sell prices updated")
 
         await browser.close()
 
