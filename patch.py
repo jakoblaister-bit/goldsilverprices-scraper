@@ -1,15 +1,20 @@
 # patch.py
-with open("scraper.py", "r", encoding="utf-8") as f:
+with open("scraper_v3.py", "r", encoding="utf-8") as f:
     c = f.read()
 
-OLD = "datetime.utcnow().isoformat()"
-NEW = "datetime.now(timezone.utc).isoformat()"
+OLD = '''    except Exception as e:
+        print(f"    [DB ERROR] {e}")
+        return False'''
 
-count = c.count(OLD)
-if count == 0:
-    print("❌ No instances found")
-else:
-    c = c.replace(OLD, NEW)
-    with open("scraper.py", "w", encoding="utf-8") as f:
+NEW = '''    except Exception as e:
+        body = e.read().decode() if hasattr(e, "read") else ""
+        print(f"    [DB ERROR] {e} — {body}")
+        return False'''
+
+if OLD in c:
+    c = c.replace(OLD, NEW, 1)
+    with open("scraper_v3.py", "w", encoding="utf-8") as f:
         f.write(c)
-    print(f"✅ Replaced {count} instances of datetime.utcnow() with datetime.now(timezone.utc)")
+    print("✅ save_to_db now prints full error body")
+else:
+    print("❌ Anchor not found")
