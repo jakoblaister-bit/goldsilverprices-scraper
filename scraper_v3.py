@@ -262,6 +262,12 @@ async def scrape_product(page, product_name, product_def, dealer_entry):
                 pass
         await page.wait_for_timeout(dealer_entry.get("wait", 4000))
 
+        # URL drift: product removed → page redirects to home/category. Bail out early.
+        final_url = page.url
+        if not final_url.startswith(url[:40]):
+            print(f"  ! {dealer:25s} URL redirected → {final_url[:70]}")
+            return "error"
+
         text      = await page.inner_text("body")
         available = detect_availability(text)
         sel = DEALER_PRICE_SELECTORS.get(dealer)
