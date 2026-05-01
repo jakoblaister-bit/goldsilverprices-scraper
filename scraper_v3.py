@@ -45,7 +45,15 @@ UNAVAILABLE_PHRASES = [
 ]
 
 # Dealers whose pages show multiple prices (e.g. spot + retail) — target the product price element directly
-DEALER_PRICE_SELECTORS = {}
+DEALER_PRICE_SELECTORS = {
+    # WooCommerce dealers: p.price scopes to the product price, avoiding spot-price widgets
+    "Guardian Gold":  "p.price",
+    "Gold Stackers":  "p.price",
+    "Swan Bullion":   "p.price",
+    "Jaggards":       "p.price",
+    # Magento (KJC): finalPrice data attribute holds the true product price
+    "KJC Bullion":    "[data-price-type='finalPrice'] .price",
+}
 
 DEBUG_DEALER = None  # set via --debug "Dealer Name"
 NO_SELL      = False # set via --no-sell
@@ -259,8 +267,11 @@ async def scrape_product(page, product_name, product_def, dealer_entry):
         sel = DEALER_PRICE_SELECTORS.get(dealer)
         if sel:
             el = await page.query_selector(sel)
-            price_text = await el.inner_text() if el else ""
-            price = extract_price(price_text, min_val, max_val) if price_text else None
+            if el:
+                price_text = await el.inner_text()
+                price = extract_price(price_text, min_val, max_val)
+            else:
+                price = extract_price(text, min_val, max_val)  # element not found — fall back
         else:
             price = extract_price(text, min_val, max_val)
 
@@ -1187,6 +1198,58 @@ CATALOGUE = {
         "weight_oz":1.0,"min_aud":80,"max_aud":180,
         "dealers":[
             {"dealer":"Gold Stackers",   "url":"https://www.goldstackers.com.au/product/buyback-silver-bar-1-oz/"},
+        ],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # LUNAR — Silver + Gold (Perth Mint annual series, 2026 Year of the Horse)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    "Silver Lunar 1oz": {
+        "metal":"silver","category":"coin","coin_type":"Lunar",
+        "weight_oz":1.0,"min_aud":95,"max_aud":250,
+        "dealers":[
+            {"dealer":"KJC Bullion",     "url":"https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-year-of-the-horse-silver-bullion-coin/3003811"},
+            {"dealer":"Perth Mint",      "url":"https://www.perthmint.com/shop/bullion/bullion-coins/australian-lunar-series-iii-2026-year-of-the-horse-1oz-silver-bullion-coin/", "wait":8000},
+            {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Coin-2026-Year-of-the-Horse-Perth-Mint/ID/637"},
+            {"dealer":"Gold Stackers",   "url":"https://www.goldstackers.com.au/product/perth-mint-2026-lunar-horse-silver-coin-1-oz/"},
+        ],
+    },
+
+    "Gold Lunar 1oz": {
+        "metal":"gold","category":"coin","coin_type":"Lunar",
+        "weight_oz":1.0,"min_aud":5500,"max_aud":10000,
+        "dealers":[
+            {"dealer":"KJC Bullion",     "url":"https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-year-of-the-horse-gold-bullion-coin/3003807"},
+            {"dealer":"Perth Mint",      "url":"https://www.perthmint.com/shop/bullion/bullion-coins/Australian-Lunar-Series-III-2026-Year-of-the-Horse-1oz-Gold-Bullion-Coin/", "wait":8000},
+            {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Gold-Coin-2026-Year-of-the-Horse-Perth-Mint/ID/644"},
+        ],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # KOALA — Silver (Perth Mint, releasing 6 May 2026 — verify URLs before first scrape)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    "Silver Koala 1oz": {
+        "metal":"silver","category":"coin","coin_type":"Koala",
+        "weight_oz":1.0,"min_aud":95,"max_aud":250,
+        "dealers":[
+            {"dealer":"Perth Mint",      "url":"https://www.perthmint.com/shop/bullion/bullion-coins/australian-koala-2026-1oz-silver-bullion-coin/", "wait":8000},
+            {"dealer":"Gold Stackers",   "url":"https://www.goldstackers.com.au/product/perth-mint-2026-koala-silver-coin-1-oz/"},
+            {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/2026-1oz-perth-mint-silver-koala-coin/"},
+        ],
+    },
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # SILVER BARS — 100oz
+    # ══════════════════════════════════════════════════════════════════════════
+
+    "Silver Bar Generic 100oz": {
+        "metal":"silver","category":"bar","bar_brand":"Generic","bar_type":"cast",
+        "weight_oz":100.0,"min_aud":8500,"max_aud":16000,
+        "dealers":[
+            {"dealer":"Gold Stackers",   "url":"https://www.goldstackers.com.au/product/generic-silver-100oz/"},
+            {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/100oz-Ainslie-Silver-Bullion/ID/95"},
         ],
     },
 
