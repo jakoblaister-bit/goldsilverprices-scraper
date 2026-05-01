@@ -1320,7 +1320,8 @@ async def scrape_jaggards_buy(page, catalogue):
                     woz = product_def.get("weight_oz")
                     wg  = product_def.get("weight_g")
                     weight_str = f"{wg}g" if wg else f"{woz}oz"
-                    jag_url = next((d["url"] for d in product_def.get("dealers", []) if d["dealer"] == "Jaggards"), None)
+                    link_el = await item.query_selector("a.woocommerce-loop-product__link")
+                    jag_url = await link_el.get_attribute("href") if link_el else next((d["url"] for d in product_def.get("dealers", []) if d["dealer"] == "Jaggards"), None)
                     row = {
                         "dealer":     "Jaggards",
                         "metal":      metal,
@@ -1400,7 +1401,8 @@ async def scrape_swan_buy(page, catalogue):
                     woz = product_def.get("weight_oz")
                     wg  = product_def.get("weight_g")
                     weight_str = f"{wg}g" if wg else f"{woz}oz"
-                    swan_url = next((d["url"] for d in product_def.get("dealers", []) if d["dealer"] == "Swan Bullion"), None)
+                    swan_link_el = await item.query_selector("a.woocommerce-loop-product__link")
+                    swan_url = await swan_link_el.get_attribute("href") if swan_link_el else next((d["url"] for d in product_def.get("dealers", []) if d["dealer"] == "Swan Bullion"), None)
                     row = {
                         "dealer":     "Swan Bullion",
                         "metal":      metal,
