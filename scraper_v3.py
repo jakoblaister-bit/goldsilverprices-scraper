@@ -810,6 +810,7 @@ CATALOGUE = {
             {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/Royal-Canadian-Mint/sml011oz-silver-maple-coin-9999", "networkidle":True},
             {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Maple-Leaf-2026/ID/679"},
             {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/2026-maple-leaf-1oz-silver-coin/"},
+            {"dealer":"Gold Stackers",   "url":"https://www.goldstackers.com.au/product/rcm-silver-maple-leaf-coin-1oz/"},
             {"dealer":"Swan Bullion",    "url":"https://swanbullion.com/2026-canadian-maple-leaf-1oz-silver-coin/"},
         ],
     },
