@@ -119,6 +119,15 @@ def delete_existing(row):
         url = f"{SUPABASE_URL}/rest/v1/prices_v2?{'&'.join(filters)}"
         req = urllib.request.Request(url, headers=DB_HEADERS, method="DELETE")
         urllib.request.urlopen(req, timeout=10)
+        # Also remove stale rows with weight_oz=null for same product (left by old scraper)
+        if row.get("weight_g") and row.get("weight_oz") is not None:
+            null_filters = [f for f in filters if "weight_oz" not in f]
+            null_filters.append("weight_oz=is.null")
+            null_url = f"{SUPABASE_URL}/rest/v1/prices_v2?{'&'.join(null_filters)}"
+            urllib.request.urlopen(
+                urllib.request.Request(null_url, headers=DB_HEADERS, method="DELETE"),
+                timeout=10
+            )
     except:
         pass
 
@@ -170,6 +179,21 @@ def save_to_db(row):
             return resp.status in (200, 201)
     except Exception as e:
         body = e.read().decode() if hasattr(e, "read") else ""
+        if row.get("buy_url") and "buy_url" in body:
+            # buy_url column not yet added — retry without it
+            row_copy = {k: v for k, v in row.items() if k != "buy_url"}
+            try:
+                payload = json.dumps(row_copy).encode("utf-8")
+                req = urllib.request.Request(
+                    f"{SUPABASE_URL}/rest/v1/prices_v2",
+                    data=payload, headers=DB_HEADERS, method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=10) as resp:
+                    return resp.status in (200, 201)
+            except Exception as e2:
+                body2 = e2.read().decode() if hasattr(e2, "read") else ""
+                print(f"    [DB ERROR] {e2} — {body2}")
+                return False
         print(f"    [DB ERROR] {e} — {body}")
         return False
 
@@ -251,6 +275,7 @@ async def scrape_product(page, product_name, product_def, dealer_entry):
             "weight_g":   weight_g,
             "available":  available,
             "status":     "OK",
+            "buy_url":    url,
             "scraped_at": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -1295,6 +1320,7 @@ async def scrape_jaggards_buy(page, catalogue):
                     woz = product_def.get("weight_oz")
                     wg  = product_def.get("weight_g")
                     weight_str = f"{wg}g" if wg else f"{woz}oz"
+                    jag_url = next((d["url"] for d in product_def.get("dealers", []) if d["dealer"] == "Jaggards"), None)
                     row = {
                         "dealer":     "Jaggards",
                         "metal":      metal,
@@ -1306,6 +1332,7 @@ async def scrape_jaggards_buy(page, catalogue):
                         "weight_g":   wg,
                         "available":  available,
                         "status":     "OK",
+                        "buy_url":    jag_url,
                         "scraped_at": datetime.now(timezone.utc).isoformat(),
                     }
                     avail_icon = "✓" if available else "✗"
@@ -1373,6 +1400,7 @@ async def scrape_swan_buy(page, catalogue):
                     woz = product_def.get("weight_oz")
                     wg  = product_def.get("weight_g")
                     weight_str = f"{wg}g" if wg else f"{woz}oz"
+                    swan_url = next((d["url"] for d in product_def.get("dealers", []) if d["dealer"] == "Swan Bullion"), None)
                     row = {
                         "dealer":     "Swan Bullion",
                         "metal":      metal,
@@ -1384,6 +1412,7 @@ async def scrape_swan_buy(page, catalogue):
                         "weight_g":   wg,
                         "available":  available,
                         "status":     "OK",
+                        "buy_url":    swan_url,
                         "scraped_at": datetime.now(timezone.utc).isoformat(),
                     }
                     avail_icon = "✓" if available else "✗"
