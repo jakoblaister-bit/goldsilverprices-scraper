@@ -44,6 +44,9 @@ UNAVAILABLE_PHRASES = [
     "join waitlist",
 ]
 
+# Dealers whose pages show multiple prices (e.g. spot + retail) — target the product price element directly
+DEALER_PRICE_SELECTORS = {}
+
 DEBUG_DEALER = None  # set via --debug "Dealer Name"
 NO_SELL      = False # set via --no-sell
 NO_SAVE      = False # set via --no-save (dry run)
@@ -229,7 +232,13 @@ async def scrape_product(page, product_name, product_def, dealer_entry):
 
         text      = await page.inner_text("body")
         available = detect_availability(text)
-        price     = extract_price(text, min_val, max_val)
+        sel = DEALER_PRICE_SELECTORS.get(dealer)
+        if sel:
+            el = await page.query_selector(sel)
+            price_text = await el.inner_text() if el else ""
+            price = extract_price(price_text, min_val, max_val) if price_text else None
+        else:
+            price = extract_price(text, min_val, max_val)
 
         row = {
             "dealer":     dealer,
@@ -676,6 +685,7 @@ CATALOGUE = {
             {"dealer":"Perth Mint",      "url":"https://www.perthmint.com/shop/bullion/bullion-coins/australian-kangaroo-2026-1-10oz-gold-bullion-coin/", "wait":8000},
             {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/1-10oz-Gold-Coin-2026-Kangaroo-Perth-Mint/ID/676"},
             {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/2026-1-10oz-perth-mint-gold-kangaroo-coin/"},
+            {"dealer":"Swan Bullion",    "url":"https://swanbullion.com/2026-australian-kangaroo-1-10oz-gold-coin/"},
         ],
     },
 
@@ -851,7 +861,7 @@ CATALOGUE = {
         "dealers":[
             {"dealer":"KJC Bullion",     "url":"https://www.kjc-gold-silver-bullion.com.au/PD/50-g-perth-mint-gold-bullion-minted-bar/2421"},
             {"dealer":"Perth Mint",      "url":"https://www.perthmint.com/shop/bullion/minted-bars/kangaroo-50g-minted-gold-bar/", "wait":8000},
-            {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/50g-Minted-Gold-Bar-Perth-Mint/ID/29"},
+            {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/50g-Minted-Gold-Bar-Perth-Mint/ID/242"},
             {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/50g-perth-mint-gold-minted-bar/"},
             {"dealer":"Swan Bullion",    "url":"https://swanbullion.com/perth-mint-50g-gold-minted-bar/"},
         ],
@@ -1167,6 +1177,239 @@ SELL_SCRAPERS = [
 ]
 
 
+# ── Jaggards buy scraper (category-page architecture) ─────────────────────────
+
+JAGGARDS_CATEGORIES = [
+    ("gold",   "coin", "https://www.jaggards.com.au/category/gold/gold-coins/"),
+    ("gold",   "bar",  "https://www.jaggards.com.au/category/gold/gold-bars/"),
+    ("silver", "coin", "https://www.jaggards.com.au/category/silver-coins/"),
+    ("silver", "bar",  "https://www.jaggards.com.au/category/silver-bars/"),
+]
+
+SWAN_CATEGORIES = [
+    ("gold",   "https://swanbullion.com/gold-bullion/"),
+    ("silver", "https://swanbullion.com/silver-bullion/"),
+]
+
+_COIN_KW = {
+    "Kangaroo":     ["kangaroo"],
+    "Maple Leaf":   ["maple"],
+    "Krugerrand":   ["krugerrand"],
+    "Britannia":    ["britannia"],
+    "Philharmonic": ["philharmonic"],
+    "Kookaburra":   ["kookaburra"],
+    "Lunar":        ["lunar"],
+}
+
+def _jag_parse_weight(title):
+    t = title.lower()
+    if re.search(r'\bhalf[\s-]*oz\b', t):
+        return 0.5, None
+    m = re.search(r'(\d+)/(\d+)\s*oz', t)
+    if m:
+        return round(int(m.group(1)) / int(m.group(2)), 6), None
+    m = re.search(r'(\d+(?:\.\d+)?)\s*kg\b', t)
+    if m:
+        return round(float(m.group(1)) * 32.1507, 4), None
+    m = re.search(r'(\d+(?:\.\d+)?)\s*g\b', t)
+    if m:
+        g = float(m.group(1))
+        return round(g / 31.1035, 4), g
+    m = re.search(r'(\d+(?:\.\d+)?)\s*oz\b', t)
+    if m:
+        return float(m.group(1)), None
+    return None, None
+
+
+def _jag_match(title, metal, category, catalogue, dealer="Jaggards"):
+    t = title.lower()
+    weight_oz, weight_g = _jag_parse_weight(title)
+    for product_name, product_def in catalogue.items():
+        if product_def.get("metal") != metal:
+            continue
+        if product_def.get("category") != category:
+            continue
+        if not any(d["dealer"] == dealer for d in product_def.get("dealers", [])):
+            continue
+        cat_woz = product_def.get("weight_oz")
+        cat_wg  = product_def.get("weight_g")
+        if weight_g is not None and cat_wg is not None:
+            if abs(weight_g - cat_wg) > 0.1:
+                continue
+        elif weight_oz is not None and cat_woz is not None:
+            if abs(weight_oz - cat_woz) > 0.01:
+                continue
+        else:
+            continue
+        if category == "coin":
+            coin_type = product_def.get("coin_type", "")
+            kws = _COIN_KW.get(coin_type, [coin_type.lower()])
+            if not any(kw in t for kw in kws):
+                continue
+        else:
+            bar_brand = (product_def.get("bar_brand") or "").lower()
+            bar_type  = (product_def.get("bar_type")  or "").lower()
+            if bar_brand and bar_brand != "generic":
+                if not any(kw in t for kw in bar_brand.split()):
+                    continue
+            if bar_type in ("cast", "minted") and bar_type not in t:
+                continue
+        return product_name, product_def
+    return None, None
+
+
+async def scrape_jaggards_buy(page, catalogue):
+    stats = {}
+    for metal, category, base_url in JAGGARDS_CATEGORIES:
+        page_num = 1
+        while True:
+            url = base_url if page_num == 1 else f"{base_url}page/{page_num}/"
+            try:
+                await page.goto(url, timeout=60000, wait_until="domcontentloaded")
+                await page.wait_for_timeout(3000)
+            except Exception as e:
+                print(f"  ✗ Jaggards {url}: {str(e)[:60]}")
+                break
+            items = await page.query_selector_all("li.product")
+            if not items:
+                break
+            for item in items:
+                try:
+                    title_el = await item.query_selector("h2.woocommerce-loop-product__title")
+                    price_el = await item.query_selector("span.price span.woocommerce-Price-amount bdi")
+                    stock_el = await item.query_selector("span.badge-instock, span.badge-backorder, span.badge-instock-backorder")
+                    if not title_el:
+                        continue
+                    title     = (await title_el.inner_text()).strip()
+                    available = stock_el is not None
+                    price     = None
+                    if price_el:
+                        raw = (await price_el.inner_text()).replace(",", "").replace("$", "").strip()
+                        try:
+                            price = float(re.sub(r'[^\d.]', '', raw))
+                        except:
+                            pass
+                    product_name, product_def = _jag_match(title, metal, category, catalogue)
+                    if not product_name:
+                        continue
+                    woz = product_def.get("weight_oz")
+                    wg  = product_def.get("weight_g")
+                    weight_str = f"{wg}g" if wg else f"{woz}oz"
+                    row = {
+                        "dealer":     "Jaggards",
+                        "metal":      metal,
+                        "category":   category,
+                        "coin_type":  product_def.get("coin_type"),
+                        "bar_brand":  product_def.get("bar_brand"),
+                        "bar_type":   product_def.get("bar_type"),
+                        "weight_oz":  woz,
+                        "weight_g":   wg,
+                        "available":  available,
+                        "status":     "OK",
+                        "scraped_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    avail_icon = "✓" if available else "✗"
+                    if price and is_price_sane(metal, price, woz):
+                        row["buy_price"] = price
+                        db_ok = save_to_db(row)
+                        tick   = "db✓" if db_ok else "db✗"
+                        suffix = "  UNAVAIL" if not available else ""
+                        key    = "unavailable" if not available else "ok"
+                        print(f"  {avail_icon} Jaggards             {weight_str:8s} ${price:>10,.2f}  [{tick}{suffix}]")
+                    elif not available:
+                        patch_available(row, False)
+                        key = "unavailable"
+                        print(f"  ✗ Jaggards             {weight_str:8s} no price — marked unavailable")
+                    else:
+                        key = "no_price"
+                        print(f"  ? Jaggards             {weight_str:8s} no price found")
+                    stats[key] = stats.get(key, 0) + 1
+                except Exception as e:
+                    stats["error"] = stats.get("error", 0) + 1
+            next_el = await page.query_selector("a.next.page-numbers")
+            if not next_el:
+                break
+            page_num += 1
+    return stats
+
+
+
+async def scrape_swan_buy(page, catalogue):
+    stats = {}
+    for metal, base_url in SWAN_CATEGORIES:
+        page_num = 1
+        while True:
+            url = base_url if page_num == 1 else f"{base_url}page/{page_num}/"
+            try:
+                await page.goto(url, timeout=60000, wait_until="domcontentloaded")
+                await page.wait_for_timeout(3000)
+            except Exception as e:
+                print(f"  ✗ Swan {url}: {str(e)[:60]}")
+                break
+            items = await page.query_selector_all("div.product")
+            if not items:
+                break
+            for item in items:
+                try:
+                    title_el = await item.query_selector(".woocommerce-loop-product__title")
+                    price_el = await item.query_selector("bdi")
+                    if not title_el:
+                        continue
+                    title     = (await title_el.inner_text()).strip()
+                    cls       = await item.get_attribute("class") or ""
+                    available = "outofstock" not in cls
+                    price     = None
+                    if price_el:
+                        raw = (await price_el.inner_text()).replace(",", "").replace("$", "").strip()
+                        try:
+                            price = float(re.sub(r'[^\d.]', '', raw))
+                        except:
+                            pass
+                    product_name, product_def = _jag_match(title, metal, "coin", catalogue, "Swan Bullion")
+                    if not product_name:
+                        product_name, product_def = _jag_match(title, metal, "bar", catalogue, "Swan Bullion")
+                    if not product_name:
+                        continue
+                    woz = product_def.get("weight_oz")
+                    wg  = product_def.get("weight_g")
+                    weight_str = f"{wg}g" if wg else f"{woz}oz"
+                    row = {
+                        "dealer":     "Swan Bullion",
+                        "metal":      metal,
+                        "category":   product_def["category"],
+                        "coin_type":  product_def.get("coin_type"),
+                        "bar_brand":  product_def.get("bar_brand"),
+                        "bar_type":   product_def.get("bar_type"),
+                        "weight_oz":  woz,
+                        "weight_g":   wg,
+                        "available":  available,
+                        "status":     "OK",
+                        "scraped_at": datetime.now(timezone.utc).isoformat(),
+                    }
+                    avail_icon = "✓" if available else "✗"
+                    if price and is_price_sane(metal, price, woz or (wg / 31.1035 if wg else None)):
+                        row["buy_price"] = price
+                        db_ok = save_to_db(row)
+                        tick   = "db✓" if db_ok else "db✗"
+                        suffix = "  UNAVAIL" if not available else ""
+                        key    = "unavailable" if not available else "ok"
+                        print(f"  {avail_icon} Swan Bullion           {weight_str:8s} ${price:>10,.2f}  [{tick}{suffix}]")
+                    elif not available:
+                        patch_available(row, False)
+                        key = "unavailable"
+                        print(f"  ✗ Swan Bullion           {weight_str:8s} no price — marked unavailable")
+                    else:
+                        key = "no_price"
+                        print(f"  ? Swan Bullion           {weight_str:8s} no price found")
+                    stats[key] = stats.get(key, 0) + 1
+                except Exception as e:
+                    stats["error"] = stats.get("error", 0) + 1
+            next_el = await page.query_selector("a.next.page-numbers")
+            if not next_el:
+                break
+            page_num += 1
+    return stats
+
 async def main():
     global DEBUG_DEALER, NO_SELL, NO_SAVE
 
@@ -1239,8 +1482,28 @@ async def main():
             print(f"{'─'*65}")
 
             for dealer_entry in dealers:
+                if dealer_entry["dealer"] in ("Jaggards", "Swan Bullion"):
+                    continue  # handled by category scrapers below
                 result = await scrape_product(page, product_name, product_def, dealer_entry)
                 stats[result] = stats.get(result, 0) + 1
+
+        # ── Jaggards buy (category scrape) ────────────────────────────────────
+        if not DEBUG_DEALER or DEBUG_DEALER == "Jaggards":
+            print(f"\n{'─'*65}")
+            print("  JAGGARDS — category scrape")
+            print(f"{'─'*65}")
+            jag_stats = await scrape_jaggards_buy(page, CATALOGUE)
+            for k, v in jag_stats.items():
+                stats[k] = stats.get(k, 0) + v
+
+        # ── Swan Bullion buy (category scrape) ───────────────────────────────
+        if not DEBUG_DEALER or DEBUG_DEALER == "Swan Bullion":
+            print(f"\n{'─'*65}")
+            print("  SWAN BULLION — category scrape")
+            print(f"{'─'*65}")
+            swan_stats = await scrape_swan_buy(page, CATALOGUE)
+            for k, v in swan_stats.items():
+                stats[k] = stats.get(k, 0) + v
 
         # ── Sell prices ───────────────────────────────────────────────────────
         if not NO_SELL:
