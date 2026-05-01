@@ -732,7 +732,7 @@ CATALOGUE = {
         "weight_oz":1.0,"min_aud":5500,"max_aud":10000,
         "dealers":[
             {"dealer":"KJC Bullion",     "url":"https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-canadian-maple-leaf-gold-bullion-coin/3003907"},
-            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/world-coins", "networkidle":True, "min_val":5500},
+            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/gml011oz-maple-leaf-gold-coin-9999", "networkidle":True, "min_val":5500},
             {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Maple-Leaf-Gold-Coin/ID/37"},
             {"dealer":"Gold Stackers",   "url":"https://www.goldstackers.com.au/buy/gold/all-1oz/", "min_val":6500},
             {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/1oz-canadian-gold-maple-leaf-coin/"},
@@ -756,7 +756,7 @@ CATALOGUE = {
         "weight_oz":1.0,"min_aud":5500,"max_aud":10000,
         "dealers":[
             {"dealer":"KJC Bullion",     "url":"https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2024-britannia-gold-bullion-coin/3003321"},
-            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/royal-mint", "networkidle":True, "min_val":6700},
+            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/royal-mint/gbritc01cor1oz-the-royal-mint-coronation-britannia-coin-9999", "networkidle":True, "min_val":6700},
             {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/2023-1oz-great-britain-britannia-gold-coin-king-charles"},
         ],
     },
@@ -780,7 +780,7 @@ CATALOGUE = {
         "dealers":[
             {"dealer":"KJC Bullion",     "url":"https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-australian-kangaroo-silver-bullion-coin/3003876"},
             {"dealer":"Perth Mint",      "url":"https://www.perthmint.com/shop/bullion/bullion-coins/australian-kangaroo-2026-1oz-silver-bullion-coin-in-pouch/", "wait":8000},
-            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/silver-coins", "networkidle":True},
+            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/skangc011oz-silver-kangaroo-coin", "networkidle":True},
             {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Coin-2026-Kangaroo-Perth-Mint/ID/677"},
             {"dealer":"Gold Stackers",   "url":"https://www.goldstackers.com.au/product/perth-mint-2026-kangaroo-silver-coin-1-oz/"},
             {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/2026-1oz-perth-mint-silver-kangaroo-coin/"},
@@ -807,7 +807,7 @@ CATALOGUE = {
         "weight_oz":1.0,"min_aud":95,"max_aud":250,
         "dealers":[
             {"dealer":"KJC Bullion",     "url":"https://www.kjc-gold-silver-bullion.com.au/PD/1-oz-2026-canadian-maple-leaf-silver-bullion-coin/3003908"},
-            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/silver-coins", "networkidle":True},
+            {"dealer":"ABC Bullion",     "url":"https://www.abcbullion.com.au/store/Bullion-Coins/Royal-Canadian-Mint/sml011oz-silver-maple-coin-9999", "networkidle":True},
             {"dealer":"Ainslie Bullion", "url":"https://ainsliebullion.com.au/Buy/View/Product/Name/1oz-Silver-Maple-Leaf-2026/ID/679"},
             {"dealer":"Jaggards",        "url":"https://www.jaggards.com.au/product/2026-maple-leaf-1oz-silver-coin/"},
             {"dealer":"Swan Bullion",    "url":"https://swanbullion.com/2026-canadian-maple-leaf-1oz-silver-coin/"},
