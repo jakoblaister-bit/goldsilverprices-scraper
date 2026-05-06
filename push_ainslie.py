@@ -39,6 +39,19 @@ def split_bar_product_type(product_type):
     return (parts[0], parts[1]) if len(parts) == 2 else (product_type, None)
 
 
+def weight_g_from_label(label):
+    if not label:
+        return None
+    if label.endswith("kg"):
+        return None
+    if label.endswith("g"):
+        try:
+            return float(label[:-1])
+        except ValueError:
+            return None
+    return None
+
+
 def to_db_row(row, scraped_at):
     is_coin = row["category"] == "coin"
 
@@ -57,6 +70,7 @@ def to_db_row(row, scraped_at):
         "bar_brand":  bar_brand,
         "bar_type":   bar_type,
         "weight_oz":    row["weight_oz"],
+        "weight_g":     weight_g_from_label(row["weight"]),
         "weight_label": row["weight"],
         "buy_price":    row["buy_price"],
         "sell_price": row["sell_price"],

@@ -49,6 +49,19 @@ def insert_rows(rows):
         raise RuntimeError(f"INSERT failed {status}: {body[:300]}")
 
 
+def weight_g_from_label(label):
+    if not label:
+        return None
+    if label.endswith("kg"):
+        return None
+    if label.endswith("g"):
+        try:
+            return float(label[:-1])
+        except ValueError:
+            return None
+    return None
+
+
 def to_db_row(r, scraped_at):
     # DB stores "coin" or "bar"; bar_type distinguishes cast vs minted
     category = r["category"] if r["category"] == "coin" else "bar"
@@ -60,6 +73,7 @@ def to_db_row(r, scraped_at):
         "bar_brand":    r.get("bar_brand"),
         "bar_type":     r.get("bar_type"),
         "weight_oz":    r["weight_oz"],
+        "weight_g":     weight_g_from_label(r["weight_label"]),
         "weight_label": r["weight_label"],
         "buy_price":    r["buy_price"],
         "sell_price":   r.get("sell_price"),
