@@ -51,6 +51,19 @@ def insert_rows(rows):
         raise RuntimeError(f"INSERT failed {status}: {body[:300]}")
 
 
+def weight_g_from_label(label):
+    if not label:
+        return None
+    if label.endswith("kg"):
+        return None
+    if label.endswith("g"):
+        try:
+            return float(label[:-1])
+        except ValueError:
+            return None
+    return None
+
+
 def is_price_sane(metal, price, weight_oz):
     spot = SPOT.get(metal, 0)
     if not spot or not weight_oz:
@@ -80,6 +93,7 @@ def push():
             "bar_brand":    p.get("bar_brand"),
             "bar_type":     p.get("bar_type"),
             "weight_oz":    p["weight_oz"],
+            "weight_g":     weight_g_from_label(p["weight_label"]),
             "weight_label": p["weight_label"],
             "buy_price":    p["buy_price"],
             "sell_price":   None,
