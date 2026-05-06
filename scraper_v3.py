@@ -173,8 +173,14 @@ def patch_available(row, available):
         print(f"    [PATCH ERROR] {e}")
 
 
+TIER1_DEALERS = {"Ainslie Bullion", "Gold Stackers", "Gold Bullion Australia"}
+
 def save_to_db(row):
     if NO_SAVE:
+        return True
+    if row.get("dealer") in TIER1_DEALERS:
+        # Tier 1 dealers are managed exclusively by their dedicated push_*.py scripts.
+        # Skipping here prevents this scraper from corrupting their data.
         return True
     try:
         delete_existing(row)
