@@ -109,9 +109,16 @@ def classify(title, api_category):
 # ── Fetcher ───────────────────────────────────────────────────────────────────
 
 def fetch_products():
-    req  = urllib.request.Request(API_URL, headers={"User-Agent": "Mozilla/5.0"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        data = json.loads(r.read())
+    req = urllib.request.Request(API_URL, headers={"User-Agent": "Mozilla/5.0"})
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=45) as r:
+                data = json.loads(r.read())
+            break
+        except Exception as e:
+            if attempt == 2:
+                raise
+            import time; time.sleep(5)
 
     products  = []
     seen_keys = set()
