@@ -136,7 +136,7 @@ def coin_type_for(name):
     ]
     for pat, display in pm_designs:
         if pat in lo:
-            return f"{display} {yr}" if yr else display
+            return display
 
     # International coins — no year suffix
     intl = [
@@ -211,7 +211,9 @@ def classify(name, url):
         ct = coin_type_for(name)
         if not ct:
             return None
+        yr_str = extract_year(name)
         return {"metal": metal, "category": "coin", "product_type": ct,
+                "year": int(yr_str) if yr_str else None,
                 "weight": weight_label, "weight_oz": weight_oz}
 
     if "bar" in lo or "bullion" in lo or "stacker" in lo:
@@ -262,6 +264,7 @@ def fetch_products():
             "metal":        fields["metal"],
             "category":     fields["category"],
             "product_type": fields["product_type"],
+            "year":         fields.get("year"),
             "weight":       fields["weight"],
             "weight_oz":    fields["weight_oz"],
             "buy_url":      full_url,

@@ -44,6 +44,11 @@ INCLUDE_SLUG = [
 FRAC_MAP = {"1/20": 0.05, "1/10": 0.1, "1/4": 0.25, "1/2": 0.5}
 
 
+def extract_year(title):
+    m = re.search(r'\b(20\d{2})\b', title)
+    return int(m.group(1)) if m else None
+
+
 def parse_weight(title):
     t = title.lower()
     m = re.search(r'(\d+(?:\.\d+)?)\s*kg\b', t)
@@ -202,8 +207,9 @@ def fetch_products():
         meta = classify(title)
         if meta is None:
             continue
+        year = extract_year(title) if meta["category"] == "coin" else None
         key = (metal, meta["category"], meta.get("coin_type"),
-               meta.get("bar_brand"), meta.get("bar_type"), weight_oz)
+               meta.get("bar_brand"), meta.get("bar_type"), weight_oz, year)
         if key in seen_keys:
             continue
         seen_keys.add(key)
@@ -212,6 +218,7 @@ def fetch_products():
             "metal":        metal,
             "category":     meta["category"],
             "coin_type":    meta["coin_type"],
+            "year":         year,
             "bar_brand":    meta["bar_brand"],
             "bar_type":     meta["bar_type"],
             "weight_oz":    weight_oz,

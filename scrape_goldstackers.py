@@ -107,7 +107,7 @@ def coin_type_for(name):
 
     for pat, display in WILDLIFE:
         if re.search(pat, lo):
-            return f"{display} {yr}" if yr else display
+            return display
 
     for pat, display in INTL:
         if pat in lo:
@@ -183,7 +183,9 @@ def classify(name):
         ct = coin_type_for(name)
         if not ct:
             return None
+        yr_m = re.search(r'\b(202\d)\b', name)
         return {"metal": metal, "category": "coin", "coin_type": ct,
+                "year": int(yr_m.group(1)) if yr_m else None,
                 "weight_oz": weight_oz, "weight_label": weight_label}
 
     # Anything that's not a coin — treat as bar (covers "Gold Bullion Australia Silver – Xoz"
@@ -251,6 +253,7 @@ def fetch_products():
             "metal":        fields["metal"],
             "category":     fields["category"],
             "coin_type":    fields.get("coin_type"),
+            "year":         fields.get("year"),
             "bar_brand":    fields.get("bar_brand"),
             "bar_type":     fields.get("bar_type"),
             "weight_oz":    fields["weight_oz"],

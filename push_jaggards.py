@@ -95,6 +95,7 @@ def push():
             "weight_oz":    p["weight_oz"],
             "weight_g":     weight_g_from_label(p["weight_label"]),
             "weight_label": p["weight_label"],
+            "year":         p.get("year"),
             "buy_price":    p["buy_price"],
             "sell_price":   None,
             "buy_url":      p["buy_url"],

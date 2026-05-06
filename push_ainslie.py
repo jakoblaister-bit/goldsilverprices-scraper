@@ -72,6 +72,7 @@ def to_db_row(row, scraped_at):
         "weight_oz":    row["weight_oz"],
         "weight_g":     weight_g_from_label(row["weight"]),
         "weight_label": row["weight"],
+        "year":         row.get("year"),
         "buy_price":    row["buy_price"],
         "sell_price": row["sell_price"],
         "buy_url":    row["buy_url"],

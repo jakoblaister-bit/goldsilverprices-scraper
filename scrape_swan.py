@@ -31,6 +31,11 @@ WEIGHT_TABLE = [
 ]
 
 
+def extract_year(title):
+    m = re.search(r'\b(20\d{2})\b', title)
+    return int(m.group(1)) if m else None
+
+
 def parse_weight(title):
     t = title.lower()
     # kg
@@ -162,10 +167,10 @@ def scrape_page(url, metal):
         if meta is None:
             continue   # skipped
 
-        # Deduplicate: skip second entry if same product (e.g., two Koala slugs)
+        year = extract_year(title) if meta["category"] == "coin" else None
         dedup_key = (metal, meta["category"],
                      meta.get("coin_type"), meta.get("bar_brand"),
-                     meta.get("bar_type"), weight_oz)
+                     meta.get("bar_type"), weight_oz, year)
         if dedup_key in seen_keys:
             continue
         seen_keys.add(dedup_key)
@@ -175,6 +180,7 @@ def scrape_page(url, metal):
             "metal":        metal,
             "category":     meta["category"],
             "coin_type":    meta["coin_type"],
+            "year":         year,
             "bar_brand":    meta["bar_brand"],
             "bar_type":     meta["bar_type"],
             "weight_oz":    weight_oz,
