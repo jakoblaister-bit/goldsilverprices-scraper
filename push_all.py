@@ -1,7 +1,7 @@
 """
 push_all.py
-Runs all three Tier 1 dealer scrapers in sequence.
-Non-Tier 1 dealer data is manually curated — do not run scraper_v3.py on a schedule.
+Runs all dealer scrapers in sequence — Tier 1 (every 3 hrs via CI) and
+Tier 2 (HTML-scraped, same pipeline).
 
 Run:  python push_all.py
 """
@@ -10,11 +10,19 @@ import sys
 from push_ainslie import push as push_ainslie
 from push_goldstackers import push as push_goldstackers
 from push_gba import push as push_gba
+from push_swan import push as push_swan
+from push_abc import push as push_abc
+from push_jaggards import push as push_jaggards
+from push_guardian import push as push_guardian
 
 dealers = [
-    ("Ainslie Bullion",       push_ainslie),
-    ("Gold Stackers",         push_goldstackers),
-    ("Gold Bullion Australia", push_gba),
+    ("Ainslie Bullion",        push_ainslie),
+    ("Gold Stackers",          push_goldstackers),
+    ("Gold Bullion Australia",  push_gba),
+    ("Swan Bullion",            push_swan),
+    ("ABC Bullion",             push_abc),
+    ("Jaggards",                push_jaggards),
+    ("Guardian Gold",           push_guardian),
 ]
 
 errors = []
@@ -33,4 +41,4 @@ if errors:
     print(f"FAILED: {', '.join(errors)}")
     sys.exit(1)
 else:
-    print("All Tier 1 dealers updated ✅")
+    print("All dealers updated ✅")

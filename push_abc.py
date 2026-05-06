@@ -1,0 +1,108 @@
+"""
+push_abc.py
+Scrapes ABC Bullion, deletes all existing ABC rows, bulk-inserts fresh data.
+
+Run:  python push_abc.py
+"""
+
+import json, urllib.request, urllib.error
+from datetime import datetime, timezone
+from scrape_abc import fetch_products, DEALER
+
+SUPABASE_URL = "https://cjxkhvkvhgnlnviykoad.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0"
+TABLE = f"{SUPABASE_URL}/rest/v1/prices_v2"
+
+HEADERS = {
+    "apikey":        SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type":  "application/json",
+    "Prefer":        "return=minimal",
+}
+
+SPOT = {"gold": 6200, "silver": 97}
+
+
+def request(method, url, data=None):
+    body = json.dumps(data).encode() if data is not None else None
+    req  = urllib.request.Request(url, data=body, headers=HEADERS, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+
+
+def delete_dealer():
+    encoded = DEALER.replace(" ", "%20")
+    status, body = request("DELETE", f"{TABLE}?dealer=eq.{encoded}")
+    if status in (200, 204):
+        print(f"  ✓ Deleted existing {DEALER} rows")
+    else:
+        raise RuntimeError(f"DELETE failed {status}: {body[:200]}")
+
+
+def insert_rows(rows):
+    status, body = request("POST", TABLE, rows)
+    if status in (200, 201):
+        print(f"  ✓ Inserted {len(rows)} rows")
+    else:
+        raise RuntimeError(f"INSERT failed {status}: {body[:300]}")
+
+
+def is_price_sane(metal, price, weight_oz):
+    spot = SPOT.get(metal, 0)
+    if not spot or not weight_oz:
+        return True
+    poz = price / weight_oz
+    return spot * 1.005 < poz < spot * 1.50
+
+
+def push():
+    print(f"Scraping {DEALER} live prices…")
+    scraped = fetch_products()
+    print(f"  {len(scraped)} products scraped")
+
+    scraped_at = datetime.now(timezone.utc).isoformat()
+    db_rows = []
+    skipped = []
+
+    for p in scraped:
+        if not is_price_sane(p["metal"], p["buy_price"], p["weight_oz"]):
+            skipped.append(p)
+            continue
+        db_rows.append({
+            "dealer":       DEALER,
+            "metal":        p["metal"],
+            "category":     p["category"],
+            "coin_type":    p.get("coin_type"),
+            "bar_brand":    p.get("bar_brand"),
+            "bar_type":     p.get("bar_type"),
+            "weight_oz":    p["weight_oz"],
+            "weight_label": p["weight_label"],
+            "buy_price":    p["buy_price"],
+            "sell_price":   None,
+            "buy_url":      p["buy_url"],
+            "available":    True,
+            "scraped_at":   scraped_at,
+        })
+
+    if skipped:
+        print(f"  ⚠ {len(skipped)} rows failed sanity check (price outside spot×1.005–1.50):")
+        for p in skipped:
+            print(f"    {p['metal']} {p.get('coin_type') or p.get('bar_brand')} ${p['buy_price']:.2f}")
+
+    print("Pushing to Supabase…")
+    delete_dealer()
+    insert_rows(db_rows)
+
+    coins  = sum(1 for r in db_rows if r["category"] == "coin")
+    bars   = sum(1 for r in db_rows if r["category"] == "bar")
+    gold   = sum(1 for r in db_rows if r["metal"] == "gold")
+    silver = sum(1 for r in db_rows if r["metal"] == "silver")
+    print(f"\n  gold={gold}  silver={silver}  coins={coins}  bars={bars}")
+    print("Done ✅")
+
+
+if __name__ == "__main__":
+    push()
