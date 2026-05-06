@@ -14,6 +14,8 @@ from push_swan import push as push_swan
 from push_abc import push as push_abc
 from push_jaggards import push as push_jaggards
 from push_guardian import push as push_guardian
+from push_perth import push as push_perth
+from push_kjc import push as push_kjc
 
 dealers = [
     ("Ainslie Bullion",        push_ainslie),
@@ -23,6 +25,8 @@ dealers = [
     ("ABC Bullion",             push_abc),
     ("Jaggards",                push_jaggards),
     ("Guardian Gold",           push_guardian),
+    ("Perth Mint",              push_perth),
+    ("KJC Bullion",             push_kjc),
 ]
 
 errors = []

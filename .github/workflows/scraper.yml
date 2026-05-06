@@ -20,5 +20,5 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Run Tier 1 scrapers
+      - name: Run all dealer scrapers
         run: python push_all.py
