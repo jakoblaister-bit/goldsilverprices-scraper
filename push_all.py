@@ -7,6 +7,7 @@ Run:  python push_all.py
 """
 
 import sys
+from snapshot_daily import run as daily_snapshot
 from push_ainslie import push as push_ainslie
 from push_goldstackers import push as push_goldstackers
 from push_gba import push as push_gba
@@ -46,3 +47,8 @@ if errors:
     sys.exit(1)
 else:
     print("All dealers updated ✅")
+
+try:
+    daily_snapshot()
+except Exception as e:
+    print(f"\nSnapshot warning (non-fatal): {e}")
