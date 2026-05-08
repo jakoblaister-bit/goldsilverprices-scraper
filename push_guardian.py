@@ -97,7 +97,7 @@ def push():
             "weight_label": p["weight_label"],
             "year":         p.get("year"),
             "buy_price":    p["buy_price"],
-            "sell_price":   None,
+            "sell_price":   p.get("sell_price"),
             "buy_url":      p["buy_url"],
             "available":    True,
             "scraped_at":   scraped_at,

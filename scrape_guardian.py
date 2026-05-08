@@ -180,11 +180,11 @@ def scrape_product(url):
     price = float(price_m.group(1).replace(',', ''))
     title = re.sub(r'<[^>]+>', '', title_m.group(1)).strip()
 
-    # Sanity: skip if price mentions "buyback" anywhere near it
-    if "buyback" in html.lower()[:2000]:
-        return None
+    # Extract buyback (sell) price from addon--buyback div
+    buyback_m = re.search(r'addon--buyback[^>]*>\s*\$([\d,]+\.?\d*)', html)
+    sell_price = float(buyback_m.group(1).replace(',', '')) if buyback_m else None
 
-    return {"title": title, "price": price, "url": url}
+    return {"title": title, "price": price, "sell_price": sell_price, "url": url}
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -228,6 +228,7 @@ def fetch_products():
             "weight_oz":    weight_oz,
             "weight_label": weight_label,
             "buy_price":    price,
+            "sell_price":   result.get("sell_price"),
             "buy_url":      result["url"],
             "available":    True,
         })
