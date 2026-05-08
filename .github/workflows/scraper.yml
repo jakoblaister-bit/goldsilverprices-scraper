@@ -1,10 +1,15 @@
 name: Bullion Price Scraper
 
 on:
-  schedule:
-    # Every 3 hours UTC — 8 runs/day covering all Australian business hours
-    - cron: '0 */3 * * *'
+  # Primary trigger: cron-job.org calls the GitHub API (workflow_dispatch) every 3 hours
+  # at exactly 00:00, 03:00, 06:00, 09:00, 12:00, 15:00, 18:00, 21:00 UTC.
+  # This avoids GitHub's queuing delays on scheduled jobs.
   workflow_dispatch:
+
+  # Fallback: GitHub's own scheduler runs once daily at midnight UTC.
+  # Catches the rare case where cron-job.org misses a window.
+  schedule:
+    - cron: '0 0 * * *'
 
 jobs:
   scrape:
@@ -19,6 +24,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
       - name: Run all dealer scrapers
         run: python push_all.py

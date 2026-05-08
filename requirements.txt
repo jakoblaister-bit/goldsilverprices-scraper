@@ -1,0 +1,2 @@
+# All scrapers use Python stdlib only (urllib, json, re, datetime).
+# No third-party packages required.
