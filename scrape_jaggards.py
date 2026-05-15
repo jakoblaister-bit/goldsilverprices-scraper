@@ -116,8 +116,8 @@ TITLE_PAT = re.compile(r'<h1[^>]*class="[^"]*product_title[^"]*"[^>]*>(.*?)</h1>
 def scrape_product(url):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     try:
-        html = urllib.request.urlopen(req, timeout=15).read().decode("utf-8", errors="ignore")
-    except urllib.error.HTTPError as e:
+        html = urllib.request.urlopen(req, timeout=20).read().decode("utf-8", errors="ignore")
+    except Exception:
         return None
 
     # Stock check first — skip before price extraction
@@ -147,7 +147,7 @@ def scrape_product(url):
 
 def get_product_urls():
     req = urllib.request.Request(SITEMAP, headers={"User-Agent": "Mozilla/5.0"})
-    xml = urllib.request.urlopen(req, timeout=15).read().decode("utf-8", errors="ignore")
+    xml = urllib.request.urlopen(req, timeout=20).read().decode("utf-8", errors="ignore")
     all_urls = re.findall(r'<loc>(https://www\.jaggards\.com\.au/product/[^<]+)</loc>', xml)
 
     filtered = []
