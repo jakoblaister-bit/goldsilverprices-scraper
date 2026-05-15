@@ -43,11 +43,34 @@ SKIP_PRODUCT_KEYWORDS = [
 
 # ── Coin type patterns ────────────────────────────────────────────────────────
 
+LUNAR_ANIMALS = [
+    ("horse", "Horse"), ("snake", "Snake"), ("dragon", "Dragon"),
+    ("rabbit", "Rabbit"), ("hare", "Rabbit"), ("tiger", "Tiger"),
+    ("ox", "Ox"), ("rat", "Mouse"), ("mouse", "Mouse"),
+    ("pig", "Pig"), ("dog", "Dog"), ("rooster", "Rooster"),
+    ("cock", "Rooster"), ("monkey", "Monkey"), ("goat", "Goat"),
+    ("sheep", "Goat"), ("ram", "Goat"),
+]
+
+def _lunar_coin_type(t):
+    for kw, name in LUNAR_ANIMALS:
+        if f"year of the {kw}" in t or f"lunar {kw}" in t:
+            return f"Lunar {name}"
+    if "lunar" in t or "year of the" in t:
+        m = re.search(r'\b(20\d\d)\b', t)
+        if m:
+            yr_map = {2026:"Horse",2025:"Snake",2024:"Dragon",2023:"Rabbit",
+                      2022:"Tiger",2021:"Ox",2020:"Mouse",2019:"Pig",
+                      2018:"Dog",2017:"Rooster",2016:"Monkey",2015:"Goat",2014:"Horse"}
+            animal = yr_map.get(int(m.group(1)))
+            if animal:
+                return f"Lunar {animal}"
+    return None
+
 COIN_TYPE_PATTERNS = [
     (r"kangaroo|nugget",  "Kangaroo"),
     (r"kookaburra",       "Kookaburra"),
     (r"koala",            "Koala"),
-    (r"lunar",            "Lunar"),
     (r"philharmonic",     "Philharmonic"),
     (r"britannia",        "Britannia"),
     (r"maple.leaf",       "Maple Leaf"),
@@ -100,7 +123,7 @@ def classify_group(title):
     category = "coin" if is_coin else "bar"
 
     if category == "coin":
-        coin_type = next(
+        coin_type = _lunar_coin_type(t) or next(
             (ct for pat, ct in COIN_TYPE_PATTERNS if re.search(pat, t)),
             None
         )

@@ -79,6 +79,30 @@ def extract_year(title):
 
 # ── Classification ────────────────────────────────────────────────────────────
 
+LUNAR_ANIMALS = [
+    ("horse", "Horse"), ("snake", "Snake"), ("dragon", "Dragon"),
+    ("rabbit", "Rabbit"), ("hare", "Rabbit"), ("tiger", "Tiger"),
+    ("ox", "Ox"), ("rat", "Mouse"), ("mouse", "Mouse"),
+    ("pig", "Pig"), ("dog", "Dog"), ("rooster", "Rooster"),
+    ("cock", "Rooster"), ("monkey", "Monkey"), ("goat", "Goat"),
+    ("sheep", "Goat"), ("ram", "Goat"),
+]
+
+def _lunar_coin_type(t):
+    for kw, name in LUNAR_ANIMALS:
+        if f"year of the {kw}" in t or f"lunar {kw}" in t:
+            return f"Lunar {name}"
+    if "lunar" in t or "year of the" in t:
+        m = re.search(r'\b(20\d\d)\b', t)
+        if m:
+            yr_map = {2026:"Horse",2025:"Snake",2024:"Dragon",2023:"Rabbit",
+                      2022:"Tiger",2021:"Ox",2020:"Mouse",2019:"Pig",
+                      2018:"Dog",2017:"Rooster",2016:"Monkey",2015:"Goat",2014:"Horse"}
+            animal = yr_map.get(int(m.group(1)))
+            if animal:
+                return f"Lunar {animal}"
+    return None
+
 COIN_TYPES = [
     ("wedge.tailed eagle",  "Wedge-Tailed Eagle"),
     ("wedge tailed eagle",  "Wedge-Tailed Eagle"),
@@ -86,8 +110,6 @@ COIN_TYPES = [
     ("nugget",              "Kangaroo"),   # old name for Kangaroo
     ("kookaburra",          "Kookaburra"),
     ("koala",               "Koala"),
-    ("year of the",         "Lunar"),
-    ("lunar",               "Lunar"),
     ("american eagle",      "American Eagle"),
     ("eagle",               "American Eagle"),
     ("maple leaf",          "Maple Leaf"),
@@ -138,11 +160,12 @@ def classify(title):
         return {"category": "bar", "coin_type": None,
                 "bar_brand": bar_brand, "bar_type": bar_type}
 
-    coin_type = None
-    for kw, ct in COIN_TYPES:
-        if kw in t:
-            coin_type = ct
-            break
+    coin_type = _lunar_coin_type(t)
+    if coin_type is None:
+        for kw, ct in COIN_TYPES:
+            if kw in t:
+                coin_type = ct
+                break
     return {"category": "coin", "coin_type": coin_type,
             "bar_brand": None, "bar_type": None}
 
