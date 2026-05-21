@@ -74,7 +74,11 @@ def is_price_sane(metal, price, weight_oz):
 
 def push():
     print(f"Scraping {DEALER} live prices…")
-    scraped = fetch_products()
+    try:
+        scraped = fetch_products()
+    except Exception as e:
+        print(f"  ⚠ Site unavailable ({e}) — keeping existing data, skipping update")
+        return
     print(f"  {len(scraped)} products scraped")
 
     before = len(scraped)

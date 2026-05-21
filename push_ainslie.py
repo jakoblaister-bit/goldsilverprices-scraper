@@ -113,7 +113,11 @@ def insert_rows(rows):
 
 def push():
     print("Scraping Ainslie Charts page…")
-    scraped = fetch_products()
+    try:
+        scraped = fetch_products()
+    except Exception as e:
+        print(f"  ⚠ Site unavailable ({e}) — keeping existing data, skipping update")
+        return
     print(f"  {len(scraped)} products parsed")
 
     before = len(scraped)

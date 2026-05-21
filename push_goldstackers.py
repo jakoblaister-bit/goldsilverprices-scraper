@@ -86,7 +86,11 @@ def to_db_row(r, scraped_at):
 
 def push():
     print(f"Scraping {DEALER} live prices…")
-    scraped = fetch_products()
+    try:
+        scraped = fetch_products()
+    except Exception as e:
+        print(f"  ⚠ Site unavailable ({e}) — keeping existing data, skipping update")
+        return
     print(f"  {len(scraped)} products parsed")
 
     before = len(scraped)
