@@ -1,14 +1,14 @@
 """
-push_gba.py
-Scrapes goldbullionaustralia.com.au/live-charts-prices/, deletes all existing
-Gold Bullion Australia rows, then bulk-inserts fresh data.
+push_imperial.py
+Fetches Imperial Bullion live JSON feed, deletes existing rows, inserts fresh data.
 
-Run:  python push_gba.py
+Run:  python push_imperial.py
+Disable in push_all.py: comment out the Imperial Bullion entry in the dealers list.
 """
 
 import json, urllib.request, urllib.error
 from datetime import datetime, timezone
-from scrape_gba import fetch_products, DEALER
+from scrape_imperial import fetch_products, DEALER
 
 SUPABASE_URL = "https://cjxkhvkvhgnlnviykoad.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNqeGtodmt2aGdubG52aXlrb2FkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1ODIyMDYsImV4cCI6MjA5MjE1ODIwNn0.eCg-JzEshidI-l7pVsumO_SsXbDOh_s--zvH1jc78g0"
@@ -36,7 +36,7 @@ def delete_dealer():
     encoded = DEALER.replace(" ", "%20")
     status, body = request("DELETE", f"{TABLE}?dealer=eq.{encoded}")
     if status in (200, 204):
-        print(f"  ✓ Deleted existing {DEALER} rows")
+        print(f"  Deleted existing {DEALER} rows")
     else:
         raise RuntimeError(f"DELETE failed {status}: {body[:200]}")
 
@@ -44,7 +44,7 @@ def delete_dealer():
 def insert_rows(rows):
     status, body = request("POST", TABLE, rows)
     if status in (200, 201):
-        print(f"  ✓ Inserted {len(rows)} rows")
+        print(f"  Inserted {len(rows)} rows")
     else:
         raise RuntimeError(f"INSERT failed {status}: {body[:300]}")
 
@@ -52,9 +52,7 @@ def insert_rows(rows):
 def weight_g_from_label(label):
     if not label:
         return None
-    if label.endswith("kg"):
-        return None
-    if label.endswith("g"):
+    if label.endswith("g") and not label.endswith("kg"):
         try:
             return float(label[:-1])
         except ValueError:
@@ -63,12 +61,10 @@ def weight_g_from_label(label):
 
 
 def to_db_row(r, scraped_at):
-    # DB stores "coin" or "bar"; bar_type distinguishes cast vs minted
-    category = r["category"] if r["category"] == "coin" else "bar"
     return {
         "dealer":       DEALER,
         "metal":        r["metal"],
-        "category":     category,
+        "category":     r["category"],
         "coin_type":    r.get("coin_type"),
         "bar_brand":    r.get("bar_brand"),
         "bar_type":     r.get("bar_type"),
@@ -85,7 +81,7 @@ def to_db_row(r, scraped_at):
 
 
 def push():
-    print(f"Scraping {DEALER} live prices…")
+    print(f"Scraping {DEALER} live prices...")
     scraped = fetch_products()
     print(f"  {len(scraped)} products parsed")
 
@@ -97,15 +93,15 @@ def push():
     scraped_at = datetime.now(timezone.utc).isoformat()
     db_rows = [to_db_row(r, scraped_at) for r in scraped]
 
-    print("Pushing to Supabase…")
+    print("Pushing to Supabase...")
     delete_dealer()
     insert_rows(db_rows)
 
-    coins  = sum(1 for r in db_rows if r["category"] == "coin")
-    bars   = sum(1 for r in db_rows if r["category"] != "coin")
-    with_sell = sum(1 for r in db_rows if r["sell_price"])
+    coins     = sum(1 for r in db_rows if r["category"] == "coin")
+    bars      = sum(1 for r in db_rows if r["category"] != "coin")
+    with_sell = sum(1 for r in db_rows if r.get("sell_price"))
     print(f"\n  coins={coins}  bars={bars}  sell_price populated={with_sell}")
-    print("Done ✅")
+    print("Done")
 
 
 if __name__ == "__main__":

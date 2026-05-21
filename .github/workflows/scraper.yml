@@ -30,4 +30,6 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run all dealer scrapers
+        env:
+          BREVO_KEY: ${{ secrets.BREVO_KEY }}
         run: python push_all.py

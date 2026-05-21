@@ -76,6 +76,11 @@ def push():
     scraped = fetch_products()
     print(f"  {len(scraped)} products scraped")
 
+    before = len(scraped)
+    scraped = [r for r in scraped if r.get("buy_price") and r["buy_price"] > 0]
+    if len(scraped) < before:
+        print(f"  {len(scraped)} with buy_price > 0  ({before - len(scraped)} dropped)")
+
     scraped_at = datetime.now(timezone.utc).isoformat()
     db_rows = []
     skipped = []
