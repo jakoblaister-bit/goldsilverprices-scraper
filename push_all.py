@@ -194,7 +194,7 @@ from push_perth import push as push_perth
 from push_kjc import push as push_kjc
 from push_bullionstar import push as push_bullionstar
 # New dealers — comment out any entry below to disable that dealer without removing it
-from push_bullionlist import push as push_bullionlist
+# from push_bullionlist import push as push_bullionlist  # disabled: JS-rendered prices, scraper returns stale data
 from push_mgc import push as push_mgc
 from push_imperial import push as push_imperial
 from push_bullionnow import push as push_bullionnow
@@ -212,7 +212,7 @@ dealers = [
     ("KJC Bullion",             push_kjc),
     ("BullionStar",             push_bullionstar),
     # New dealers (added 2026-05-20) — comment out individually to revert
-    ("Bullion List",            push_bullionlist),
+    # ("Bullion List",          push_bullionlist),  # disabled: JS-rendered prices
     ("Melbourne Gold Company",  push_mgc),
     ("Imperial Bullion",        push_imperial),
     ("Bullion Now",             push_bullionnow),
